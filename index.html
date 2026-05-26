@@ -740,6 +740,35 @@ tbody tr:last-child td{border-bottom:none;}
   .form-row{grid-template-columns:1fr;}
   .dash-stats{grid-template-columns:repeat(2,1fr);}
 }
+
+/* ─── HOMEPAGE BANNER STRIP ─── */
+.banner-strip{
+  background:var(--brown);
+  padding:0;
+  overflow:hidden;
+  position:relative;
+  z-index:10;
+}
+.banner-strip-track{
+  display:flex;
+  gap:0;
+  animation:bannerScroll 28s linear infinite;
+  width:max-content;
+}
+.banner-strip:hover .banner-strip-track{ animation-play-state:paused; }
+@keyframes bannerScroll{
+  0%{transform:translateX(0);}
+  100%{transform:translateX(-50%);}
+}
+.banner-item{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 32px;
+  color:#f5ede0;
+  font-size:0.82rem;font-weight:700;letter-spacing:0.05em;
+  white-space:nowrap;border-right:1px solid rgba(245,237,224,0.2);
+}
+.banner-item .b-icon{font-size:1rem;}
+.banner-item .b-sep{color:rgba(245,237,224,0.4);margin:0 8px;}
 </style>
   <!-- Firebase SDK — must load first -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -794,6 +823,14 @@ tbody tr:last-child td{border-bottom:none;}
 </div>
 
 <!-- ═══════════ HOME PAGE ═══════════ -->
+
+<!-- ═══════════ BANNER STRIP ═══════════ -->
+<div class="banner-strip" id="homeBannerStrip" style="display:none;">
+  <div class="banner-strip-track" id="bannerStripTrack">
+    <!-- filled by JS -->
+  </div>
+</div>
+
 <div id="home" class="page active">
 
   <!-- Hero -->
@@ -1361,6 +1398,7 @@ tbody tr:last-child td{border-bottom:none;}
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
         Continue with Google
       </button>
+      <div style="font-size:0.7rem;color:#aaa;font-weight:600;text-align:center;margin-top:0.25rem;">Google login activates on Netlify deployment</div>
     </div>
 
     <!-- Step 2: OTP -->
@@ -1505,7 +1543,7 @@ function initFromLocalStorage(){
 
   // 3. Banners
   const savedBanners = loadFromLocal('bb_banners', null);
-  if(savedBanners) bannersData = savedBanners;
+  if(savedBanners){ bannersData = savedBanners; }
 
   // 4. Loyalty config
   const savedLoyalty = loadFromLocal('bb_loyalty_config', null);
@@ -1613,6 +1651,30 @@ function initFromLocalStorage(){
   if(savedDishes && savedDishes.length) signatureDishesData = savedDishes;
   renderSignatureDishes();
 
+  // 12. Customer profile restore
+  try{
+    const _prof = JSON.parse(localStorage.getItem('bb_profile')||'null');
+    if(_prof && _prof.name){
+      if(!currentUser) currentUser = {};
+      Object.assign(currentUser, _prof);
+      const pn = document.getElementById('profName');   if(pn) pn.value = _prof.name;
+      const pe = document.getElementById('profEmail');  if(pe) pe.value = _prof.email||'';
+      const pp = document.getElementById('profPhone');  if(pp && _prof.phone) pp.value = _prof.phone;
+      const cn = document.getElementById('custName');   if(cn) cn.textContent = _prof.name;
+      const cp = document.getElementById('custPhone');  if(cp && _prof.phone) cp.textContent = _prof.phone;
+      // Show My Account button if profile exists
+      const dashBtn = document.getElementById('dashNavBtn');
+      const loginBtn = document.getElementById('loginNavBtn');
+      if(dashBtn && loginBtn && _prof.name){
+        dashBtn.style.display='inline-block';
+        dashBtn.textContent = _prof.name.split(' ')[0];
+        loginBtn.style.display='none';
+      }
+    }
+  }catch(e){}
+
+  // Render banner strip from saved data
+  renderBannerStrip();
   console.log('✅ LocalStorage data restored!');
 }
 // ════════════════════════════════════════════════
@@ -1831,7 +1893,9 @@ function saveCustomerProfile(){
   else currentUser={name,email:email||''};
 
   // Save to localStorage — persists on reload
-  try{ localStorage.setItem('bb_profile',JSON.stringify({name,email:email||'',phone:currentUser?.phone||'',uid:currentUser?.uid||''})); }catch(e){}
+  try{ localStorage.setItem('bb_profile',JSON.stringify({
+    name, email:email||'', phone:currentUser?.phone||'', uid:currentUser?.uid||''
+  })); }catch(e){}
 
   // Update UI
   ['custName'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=name;});
@@ -1846,7 +1910,10 @@ function saveCustomerProfile(){
       else db.collection('customers').add({name,email:email||'',uid:currentUser.uid,phone:currentUser.phone||'',orders:0,total:'₹0',status:'Active',loyalty:'None',last:'Today',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     });
   }
-  showToast('✅ Profile saved!');
+  // Update nav button name
+  const _db=document.getElementById('dashNavBtn');
+  if(_db) _db.textContent=name.split(' ')[0];
+    showToast('✅ Profile saved!');
 }
 
 // Restore profile from localStorage on load
@@ -1865,12 +1932,19 @@ function saveCustomerProfile(){
 
 function logoutCustomer(){
   currentUser = null;
-  // Clear only customer session (not admin session)
+  // Clear customer session and profile
   localStorage.removeItem('bb_customer_session');
   localStorage.removeItem('bb_customer_phone');
+  localStorage.removeItem('bb_profile');
   document.getElementById('loginNavBtn').style.display='block';
   document.getElementById('dashNavBtn').style.display='none';
   document.getElementById('notifWrap').style.display='none';
+  // Reset profile fields
+  const _pn=document.getElementById('profName'); if(_pn) _pn.value='';
+  const _pe=document.getElementById('profEmail'); if(_pe) _pe.value='';
+  const _pp=document.getElementById('profPhone'); if(_pp) _pp.value='';
+  const _cn=document.getElementById('custName'); if(_cn) _cn.textContent='Welcome!';
+  const _cp=document.getElementById('custPhone'); if(_cp) _cp.textContent='+91 XXXXX XXXXX';
   showPage('home');
   showToast('👋 Logged out successfully');
 }
@@ -2593,6 +2667,22 @@ function showAdminSection(sec, el){
       <div class="form-group">
         <label>Description / Note</label>
         <input id="nb_note" type="text" placeholder="e.g. Valid weekends only"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>🎨 Banner Background Color</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input id="nb_color" type="color" value="#5c3317" style="width:48px;height:36px;border:none;cursor:pointer;border-radius:6px;"/>
+            <input id="nb_color_text" type="text" value="#5c3317" placeholder="#5c3317" oninput="document.getElementById('nb_color').value=this.value" style="flex:1;font-size:0.85rem;font-weight:700;"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>🔤 Text Color</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input id="nb_textcolor" type="color" value="#f5ede0" style="width:48px;height:36px;border:none;cursor:pointer;border-radius:6px;"/>
+            <input id="nb_textcolor_text" type="text" value="#f5ede0" placeholder="#f5ede0" oninput="document.getElementById('nb_textcolor').value=this.value" style="flex:1;font-size:0.85rem;font-weight:700;"/>
+          </div>
+        </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:0.5rem;">
         <button class="btn-sm" onclick="addNewBanner()">✅ Add Banner</button>
@@ -4082,8 +4172,8 @@ let bannersData = [];
 function renderBannersHTML(){
   if(!bannersData.length) return '<div style="text-align:center;color:var(--muted);padding:2rem;font-weight:700;">No banners yet. Add one above.</div>';
   return bannersData.map((b,i)=>`
-    <div class="banner-row" id="bannerRow_${i}">
-      <div style="display:flex;align-items:center;gap:12px;">
+    <div class="banner-row" id="bannerRow_${i}" style="flex-wrap:wrap;gap:0.75rem;">
+      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:200px;">
         <div class="banner-icon-area" style="font-size:1.75rem;">
           ${b.imageUrl ? `<img src="${b.imageUrl}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;"/>` : b.icon}
         </div>
@@ -4092,9 +4182,17 @@ function renderBannersHTML(){
           <span style="font-size:0.8rem;color:#666;">${b.note}</span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:12px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:0.72rem;font-weight:700;color:var(--muted);">🎨 BG:</span>
+          <input type="color" value="${b.color||'#5c3317'}" onchange="updateBannerColor(${i},'color',this.value)" style="width:32px;height:28px;border:none;cursor:pointer;border-radius:4px;" title="Banner background color"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:0.72rem;font-weight:700;color:var(--muted);">🔤 Text:</span>
+          <input type="color" value="${b.textColor||'#f5ede0'}" onchange="updateBannerColor(${i},'textColor',this.value)" style="width:32px;height:28px;border:none;cursor:pointer;border-radius:4px;" title="Banner text color"/>
+        </div>
         <div class="toggle ${b.on?'on':''}" onclick="toggleBanner(${i},this)"></div>
-        <button class="btn-sm" onclick="triggerBannerUpload(${i})">Upload Image</button>
+        <button class="btn-sm" onclick="triggerBannerUpload(${i})">📷</button>
         <input type="file" id="bannerImg_${i}" accept="image/*" style="display:none" onchange="applyBannerImage(this,${i})"/>
         <button class="btn-danger" onclick="deleteBanner(${i})" style="font-size:0.75rem;padding:5px 10px;">🗑</button>
       </div>
@@ -4110,6 +4208,7 @@ function toggleBanner(i, el){
   bannersData[i].on = !bannersData[i].on;
   el.classList.toggle('on');
   saveToLocal('bb_banners', bannersData);
+  renderBannerStrip();
   showToast(`${bannersData[i].on?'✅ Banner on':'⛔ Banner off'} — ${bannersData[i].name}`);
 }
 
@@ -4118,6 +4217,7 @@ function deleteBanner(i){
   bannersData.splice(i,1);
   refreshBannersList();
   saveToLocal('bb_banners', bannersData);
+  renderBannerStrip();
   showToast(`🗑 "${name}" deleted!`);
 }
 
@@ -4130,15 +4230,63 @@ function addNewBanner(){
   const icon = document.getElementById('nb_icon')?.value?.trim() || '📢';
   const name = document.getElementById('nb_name')?.value?.trim();
   const note = document.getElementById('nb_note')?.value?.trim() || 'Custom banner';
+  const color = document.getElementById('nb_color')?.value || '#5c3317';
+  const textColor = document.getElementById('nb_textcolor')?.value || '#f5ede0';
   if(!name){ showToast('⚠️ Please enter a banner name!'); return; }
-  bannersData.push({ icon, name, note, on:false });
+  bannersData.push({ icon, name, note, on:false, color, textColor });
   refreshBannersList();
   saveToLocal('bb_banners', bannersData);
+  renderBannerStrip();
   document.getElementById('addBannerForm').style.display='none';
   document.getElementById('nb_icon').value='';
   document.getElementById('nb_name').value='';
   document.getElementById('nb_note').value='';
+  document.getElementById('nb_color').value='#5c3317';
+  document.getElementById('nb_color_text').value='#5c3317';
+  document.getElementById('nb_textcolor').value='#f5ede0';
+  document.getElementById('nb_textcolor_text').value='#f5ede0';
   showToast(`✨ "${name}" banner added!`);
+}
+
+function updateBannerColor(i, prop, value){
+  bannersData[i][prop] = value;
+  saveToLocal('bb_banners', bannersData);
+  renderBannerStrip();
+  showToast(`🎨 Banner color updated!`);
+}
+
+
+// ────── RENDER HOMEPAGE BANNER STRIP ──────
+function renderBannerStrip(){
+  const strip = document.getElementById('homeBannerStrip');
+  const track = document.getElementById('bannerStripTrack');
+  if(!strip || !track) return;
+  const active = bannersData.filter(b => b.on);
+  if(!active.length){ strip.style.display='none'; return; }
+  strip.style.display='block';
+
+  // If all banners share the same color, set strip background
+  // Otherwise, each banner item gets its own color
+  const firstColor = active[0].color || '#5c3317';
+  const allSameColor = active.every(b=>(b.color||'#5c3317')===firstColor);
+  if(allSameColor){
+    strip.style.background = firstColor;
+  } else {
+    strip.style.background = '#5c3317'; // fallback
+  }
+
+  // Build items — each item uses its own colors
+  const items = active.map(b => {
+    const bg = b.color || '#5c3317';
+    const tc = b.textColor || '#f5ede0';
+    return `<div class="banner-item" style="background:${bg};color:${tc};border-right-color:${tc}20;">
+      <span class="b-icon">${b.icon||'📢'}</span>
+      <span style="color:${tc};">${b.name}</span>
+      ${b.note ? `<span class="b-sep" style="color:${tc}80;">•</span><span style="opacity:0.85;font-size:0.78rem;color:${tc};">${b.note}</span>` : ''}
+    </div>`;
+  }).join('');
+  // Duplicate for infinite scroll
+  track.innerHTML = items + items;
 }
 
 // ────── SPECIAL OFFERS SYSTEM ──────
@@ -4558,7 +4706,45 @@ function closeModal(e){
 
 // ────── LOCAL LOYALTY / PAYMENT (without Firebase) ──────
 window.signInWithGoogle = function(){
-  showToast('⚠️ Google login only works on Netlify. Please use phone login.');
+  showToast('⚠️ Google login requires Netlify deployment. On local file, use direct name login below.');
+  // Show name input fallback for local mode
+  const step1 = document.getElementById('otpStep1');
+  if(step1){
+    const fallback = document.getElementById('localLoginFallback');
+    if(!fallback){
+      const div = document.createElement('div');
+      div.id = 'localLoginFallback';
+      div.style.cssText = 'margin-top:1rem;text-align:left;';
+      div.innerHTML = `
+        <div style="font-size:0.75rem;font-weight:700;color:var(--muted);margin-bottom:0.5rem;text-align:center;">— Local Mode Login —</div>
+        <input id="localLoginName" type="text" placeholder="Enter your name" style="width:100%;padding:12px;border:2px solid rgba(92,51,23,0.2);border-radius:8px;font-size:0.95rem;font-weight:700;margin-bottom:0.5rem;box-sizing:border-box;"/>
+        <input id="localLoginEmail" type="email" placeholder="Enter your email (optional)" style="width:100%;padding:12px;border:2px solid rgba(92,51,23,0.2);border-radius:8px;font-size:0.95rem;font-weight:700;margin-bottom:0.75rem;box-sizing:border-box;"/>
+        <button onclick="localQuickLogin()" style="width:100%;background:var(--brown);color:#fff;border:none;padding:13px;border-radius:8px;font-size:0.9rem;font-weight:900;cursor:pointer;">☕ Continue as Guest →</button>
+      `;
+      step1.appendChild(div);
+    } else {
+      fallback.style.display = fallback.style.display==='none' ? 'block' : 'block';
+    }
+  }
+}
+
+function localQuickLogin(){
+  const name = document.getElementById('localLoginName')?.value?.trim();
+  const email = document.getElementById('localLoginEmail')?.value?.trim();
+  if(!name){ showToast('⚠️ Please enter your name!'); return; }
+  currentUser = { name, email: email||'', phone: '', uid: 'local_'+Date.now() };
+  // Save to localStorage
+  try{ localStorage.setItem('bb_profile', JSON.stringify({ name, email: email||'', phone:'', uid: currentUser.uid })); }catch(e){}
+  // Update UI
+  const loginBtn = document.getElementById('loginNavBtn');
+  const dashBtn  = document.getElementById('dashNavBtn');
+  if(loginBtn) loginBtn.style.display='none';
+  if(dashBtn){ dashBtn.style.display='inline-block'; dashBtn.textContent = name.split(' ')[0]; }
+  ['loyaltyCardName','pearlCardName','goldenCardName'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=name;});
+  const custName=document.getElementById('custName'); if(custName) custName.textContent=name;
+  goToStep(3);
+  const welcomeMsg=document.getElementById('otpWelcomeMsg'); if(welcomeMsg) welcomeMsg.textContent=`Welcome, ${name.split(' ')[0]}! ☕`;
+  showToast(`✅ Welcome, ${name.split(' ')[0]}! 🎉`);
 }
 
 function deleteOrder(i){
@@ -4994,13 +5180,24 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 async function signInWithGoogle(){
   try{
     showToast('⏳ Google login...');
-    const result = await auth.signInWithPopup(googleProvider);
-    await handleGoogleLogin(result.user);
+    await auth.signInWithRedirect(googleProvider);
   } catch(e){
-    if(e.code !== 'auth/popup-closed-by-user') showToast('❌ Login failed. Try again.');
+    showToast('❌ Login failed. Try again.');
+    console.error(e);
   }
 }
 window.signInWithGoogle = signInWithGoogle;
+
+// Handle redirect result on page load
+auth.getRedirectResult().then(async result=>{
+  if(result && result.user){
+    await handleGoogleLogin(result.user);
+    closeOTPModal();
+  }
+}).catch(e=>{
+  if(e.code && e.code !== 'auth/no-current-user')
+    console.warn('Redirect result error:', e.code);
+});
 
 async function handleGoogleLogin(user){
   currentUser = {name:user.displayName||'Customer', email:user.email, phone:user.phoneNumber||user.uid, photo:user.photoURL, uid:user.uid};
@@ -5114,6 +5311,7 @@ db.collection('payment_requests').onSnapshot(snap=>{
 // BANNERS
 db.collection('banners').orderBy('order').onSnapshot(snap=>{
   bannersData=snap.docs.map(d=>({...d.data(),firestoreId:d.id}));
+  renderBannerStrip();
   const wrap=document.getElementById('bannersListWrap');
   if(wrap) wrap.innerHTML=renderBannersHTML();
 });
@@ -5341,7 +5539,9 @@ addNewBanner=async function(){
 
 toggleBanner=async function(i,el){
   const b=bannersData[i]; const newOn=!b.on; el.classList.toggle('on');
+  bannersData[i].on = newOn;
   if(b?.firestoreId) await db.collection('banners').doc(b.firestoreId).update({on:newOn});
+  renderBannerStrip();
   showToast(`${newOn?'✅ On':'⛔ Off'} — ${b.name}`);
 };
 
