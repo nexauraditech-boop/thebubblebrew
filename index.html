@@ -1228,17 +1228,20 @@ tbody tr:last-child td{border-bottom:none;}
   </div>
   <div class="cust-body">
     <div class="cust-tabs">
-      <div class="cust-tab active" onclick="showCustTab('loyalty',this)">⭐ Brew Passport</div>
+      <div class="cust-tab active" onclick="showCustTab('orders',this)">📋 Order History</div>
+      <div class="cust-tab" onclick="showCustTab('loyalty',this)">⭐ Brew Passport</div>
       <div class="cust-tab" onclick="showCustTab('profile',this)">👤 Profile</div>
     </div>
 
-    <!-- Orders Tab (hidden from customer) -->
-    <div id="custTabOrders" style="display:none;">
-      <div id="custOrdersList"></div>
+    <!-- Orders Tab -->
+    <div id="custTabOrders">
+      <div id="custOrdersList">
+        <div style="text-align:center;padding:2rem;color:#aaa;font-weight:700;">⏳ Loading your orders...</div>
+      </div>
     </div>
 
     <!-- Loyalty Tab -->
-    <div id="custTabLoyalty">
+    <div id="custTabLoyalty" style="display:none;">
 
       <!-- Tier Selection Tabs -->
       <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;overflow-x:auto;scrollbar-width:none;">
@@ -1255,7 +1258,7 @@ tbody tr:last-child td{border-bottom:none;}
           <div class="loyalty-sub" id="loyaltyCardSub">Entry Level Member</div>
           <div class="loyalty-stamps" id="loyaltyStamps"></div>
           <div class="loyalty-progress-text" id="loyaltyProgressText">0 / 8 stamps</div>
-          <div class="loyalty-points-row" style="display:none;">
+          <div class="loyalty-points-row">
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="loyaltyStampCount">0</div><div class="loyalty-point-label">Stamps</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="loyaltyFreeDrinks">0</div><div class="loyalty-point-label">Free Drinks</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="loyaltyPoints">0</div><div class="loyalty-point-label">Points</div></div>
@@ -1285,7 +1288,7 @@ tbody tr:last-child td{border-bottom:none;}
           <div class="loyalty-sub">Regular Member</div>
           <div class="loyalty-stamps" id="pearlStamps"></div>
           <div class="loyalty-progress-text" id="pearlProgressText">0 / 8 stamps</div>
-          <div class="loyalty-points-row" style="display:none;">
+          <div class="loyalty-points-row">
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="pearlStampCount">0</div><div class="loyalty-point-label">Stamps</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="pearlFreeDrinks">0</div><div class="loyalty-point-label">Free Drinks</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="pearlPoints">0</div><div class="loyalty-point-label">Points</div></div>
@@ -1316,7 +1319,7 @@ tbody tr:last-child td{border-bottom:none;}
           <div class="loyalty-sub">VIP Member</div>
           <div class="loyalty-stamps" id="goldenStamps"></div>
           <div class="loyalty-progress-text" id="goldenProgressText">0 / 8 stamps</div>
-          <div class="loyalty-points-row" style="display:none;">
+          <div class="loyalty-points-row">
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="goldenStampCount">0</div><div class="loyalty-point-label">Stamps</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="goldenFreeDrinks">0</div><div class="loyalty-point-label">Free Drinks</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="goldenPoints">0</div><div class="loyalty-point-label">Points</div></div>
@@ -1395,6 +1398,7 @@ tbody tr:last-child td{border-bottom:none;}
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
         Continue with Google
       </button>
+
 
     </div>
 
@@ -1812,14 +1816,25 @@ function confirmPayment(){
   const note = document.getElementById('orderNote')?.value?.trim() || '';
   const cartSnapshot = [...cart];
   const totalAmt = cartSnapshot.reduce((s,c)=>s+c.price*c.qty,0);
+  const orderId = '#'+Math.floor(1000+Math.random()*9000);
+  // Save order locally so customer order history works
+  const orderDoc = {
+    id:orderId, customer:currentUser?.name||'Guest',
+    phone:currentUser?.phone||'', uid:currentUser?.uid||'', email:currentUser?.email||'',
+    items:cartSnapshot.map(c=>`${c.name} ×${c.qty}`).join(', '),
+    total:`₹${totalAmt}`, status:'Preparing', note,
+    time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+    createdAt:{toDate:()=>new Date()}
+  };
+  ordersData.unshift(orderDoc);
   closePayModal();
   cart = [];
   document.getElementById('orderNote').value = '';
   updateCartUI();
-  showToast('✅ Payment confirmed! Order placed. We\'ll notify you shortly! 🎉');
-  setTimeout(()=>showToast('📋 Order #1043 is being prepared...'),3500);
+  refreshCustomerOrders();
+  showToast('✅ Payment confirmed! Order placed. 🎉');
+  setTimeout(()=>showToast('📋 '+orderId+' is being prepared...'),3500);
   setTimeout(()=>{ if(currentUser) openReviewModal(); }, 8000);
-  // WhatsApp to cafe with note
   const cartSummary = cartSnapshot.map(c=>`${c.emoji} ${c.name} ×${c.qty} — ₹${c.price*c.qty}`).join('\n');
   const noteStr = note ? `\n\n📝 Special Note: ${note}` : '';
   sendOrderWhatsApp(`📦 Items:\n${cartSummary}\n\n💰 Total: ₹${totalAmt}${noteStr}`);
@@ -2027,6 +2042,9 @@ function showCustTab(tab, el){
   document.getElementById('custTabLoyalty').style.display='none';
   document.getElementById('custTabProfile').style.display='none';
   document.getElementById('custTab'+tab.charAt(0).toUpperCase()+tab.slice(1)).style.display='block';
+  // Refresh data when tab is opened
+  if(tab==='orders') refreshCustomerOrders();
+  if(tab==='loyalty') updateAllTierCards();
 }
 
 // ────── ROUTING ──────
@@ -2040,6 +2058,7 @@ function showPage(id){
   }
   if(id==='menu') renderMenu('all');
   if(id==='customer' && !currentUser){ showPage('home'); openOTPModal(); return; }
+  if(id==='customer' && currentUser){ refreshCustomerOrders(); updateAllTierCards(); }
 }
 function setActive(el){
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
@@ -3989,14 +4008,14 @@ function renderDishesAdminHTML(){
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group" style="flex:1;"><label>Emoji (if no photo)</label><input id="ed_emoji_${i}" type="text" value="${d.emoji}" style="font-size:1.4rem;text-align:center;"/></div>
+        <div class="form-group" style="flex:1;"><label>Emoji (photo na hoy to)</label><input id="ed_emoji_${i}" type="text" value="${d.emoji}" style="font-size:1.4rem;text-align:center;"/></div>
         <div class="form-group" style="flex:3;"><label>Dish Name</label><input id="ed_name_${i}" type="text" value="${d.name.replace(/"/g,'&quot;')}"/></div>
       </div>
       <div class="form-group"><label>Description</label><input id="ed_desc_${i}" type="text" value="${d.desc.replace(/"/g,'&quot;')}"/></div>
       <div class="form-row">
         <div class="form-group"><label>Price (₹)</label><input id="ed_price_${i}" type="number" value="${d.price}"/></div>
         <div class="form-group"><label>Tag / Badge</label><input id="ed_tag_${i}" type="text" value="${(d.tag||'').replace(/"/g,'&quot;')}"/></div>
-        <div class="form-group"><label>BG Color (if no photo)</label><input id="ed_bg_${i}" type="text" value="${d.bg||'#5c3317'}"/></div>
+        <div class="form-group"><label>BG Color (photo na hoy to)</label><input id="ed_bg_${i}" type="text" value="${d.bg||'#5c3317'}"/></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:0.75rem;">
         <button class="btn-sm" onclick="saveSignatureDishEdit(${i})">💾 Save</button>
@@ -4705,7 +4724,7 @@ function closeModal(e){
 
 // ────── LOCAL LOYALTY / PAYMENT (without Firebase) ──────
 window.signInWithGoogle = function(){
-  showToast('⚠️ Google login works on the deployed site. Please use Guest login here.');
+  showToast('⚠️ Google login works on deployed site. Local file માં Guest login વાપરો.');
   // Show name input fallback for local mode
   const step1 = document.getElementById('otpStep1');
   if(step1){
@@ -5087,10 +5106,8 @@ function loadLoyaltyStamps(){
   if(typeof db!=='undefined'&&db){
     db.collection('loyalty_stamps').onSnapshot(snap=>{
       snap.docs.forEach(doc=>{ loyaltyStampStore[doc.id]=doc.data(); });
-      if(currentUser){
-        const key=currentUser.uid||currentUser.email||currentUser.phone;
-        if(key&&loyaltyStampStore[key]) updateCustomerLoyaltyCard(key);
-      }
+      // Fix: stamps are stored as uid_sip, uid_pearl, uid_golden — update all tier cards
+      if(currentUser) updateAllTierCards();
     });
   }
 }
@@ -5157,7 +5174,11 @@ window.addEventListener('DOMContentLoaded', ()=>{
     <p style="font-size:0.82rem;color:var(--muted);font-weight:700;margin-bottom:1.25rem;">Leave a quick review — it means a lot! ☕</p>
     <!-- Star Rating -->
     <div style="display:flex;justify-content:center;gap:8px;margin-bottom:1rem;" id="starRating">
-      ${[1,2,3,4,5].map(n=>`<span onclick="setReviewStar(${n})" id="star_${n}" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>`).join('')}
+      <span onclick="setReviewStar(1)" id="star_1" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
+      <span onclick="setReviewStar(2)" id="star_2" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
+      <span onclick="setReviewStar(3)" id="star_3" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
+      <span onclick="setReviewStar(4)" id="star_4" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
+      <span onclick="setReviewStar(5)" id="star_5" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
     </div>
     <textarea id="reviewText" placeholder="Tell us about your experience…" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:10px;padding:10px;font-size:0.85rem;font-weight:600;font-family:'DM Sans',sans-serif;resize:none;height:80px;margin-bottom:1rem;"></textarea>
     <input id="reviewName" type="text" placeholder="Your name (optional)" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:8px;padding:8px 12px;font-size:0.82rem;font-weight:600;margin-bottom:1rem;font-family:'DM Sans',sans-serif;"/>
@@ -5167,6 +5188,33 @@ window.addEventListener('DOMContentLoaded', ()=>{
 </div>
 
 <button class="voice-btn" id="voiceBtn" onclick="toggleAmbient()" title="Cafe Ambiance Sound">🎵</button>
+
+<!-- ── GLOBAL HELPER FUNCTIONS (available with or without Firebase) ── -->
+<script>
+// Always-available order history refresh — works for phone/uid/email matched users
+function refreshCustomerOrders(){
+  if(!currentUser) return;
+  const listEl=document.getElementById('custOrdersList');
+  if(!listEl) return;
+  const myOrders=ordersData.filter(o=>
+    (currentUser.phone && o.phone && o.phone===currentUser.phone) ||
+    (currentUser.uid   && o.uid   && o.uid===currentUser.uid)     ||
+    (currentUser.email && o.email && o.email===currentUser.email)
+  );
+  listEl.innerHTML = myOrders.length===0
+    ?'<div style="text-align:center;padding:2rem;color:#aaa;font-weight:700;">No orders yet. 🛒</div>'
+    :myOrders.map(o=>{
+      const d=o.createdAt?.toDate?o.createdAt.toDate():new Date();
+      return `<div class="order-hist-item">
+        <div class="order-hist-date"><div class="order-hist-day">${d.getDate()}</div><div class="order-hist-mon">${d.toLocaleString('en',{month:'short'})}</div></div>
+        <div class="order-hist-items"><div class="order-hist-name">${o.items}</div><div class="order-hist-sub">${o.id}</div></div>
+        <div class="order-hist-right"><div class="order-hist-total">${o.total}</div>
+        <span class="order-hist-badge ${o.status==='Delivered'?'ohb-green':o.status==='Preparing'?'ohb-amber':'ohb-red'}">${o.status}</span></div>
+      </div>`;
+    }).join('');
+}
+</script>
+
 <!-- ── FIREBASE REAL-TIME INTEGRATION ── -->
 <script>
 // Only run if Firebase connected (Netlify) — skipped on local
@@ -5186,9 +5234,9 @@ async function signInWithGoogle(){
     }
   } catch(e){
     if(e.code === 'auth/popup-blocked'){
-      showToast('⚠️ Popup blocked! Please add your domain in Firebase Console.');
+      showToast('⚠️ Popup blocked! Firebase Console માં તમારો domain add કરો.');
     } else if(e.code === 'auth/unauthorized-domain'){
-      showToast('⚠️ Domain not authorized — add your Vercel URL in Firebase Console → Authentication → Authorized domains.');
+      showToast('⚠️ Domain authorized નથી — Firebase Console → Authentication → Authorized domains માં Vercel URL add કરો.');
     } else {
       showToast('❌ Login failed: ' + (e.message||e.code||'Unknown error'));
     }
@@ -5243,6 +5291,9 @@ async function handleGoogleLogin(user){
   if(welcomeMsg) welcomeMsg.textContent = `Welcome, ${currentUser.name.split(' ')[0]}! ☕`;
   saveCustomerSession(currentUser.email || currentUser.uid);
   showToast(`✅ Welcome, ${currentUser.name.split(' ')[0]}!`);
+  // Refresh order history and loyalty cards for this user
+  refreshCustomerOrders();
+  updateAllTierCards();
 }
 
 auth.onAuthStateChanged(async user=>{
@@ -5269,23 +5320,7 @@ db.collection('menu').orderBy('name').onSnapshot(snap=>{
 // ORDERS
 db.collection('orders').orderBy('createdAt','desc').onSnapshot(snap=>{
   ordersData = snap.docs.map(d=>({...d.data(),firestoreId:d.id}));
-  if(currentUser?.phone){
-    const myOrders=ordersData.filter(o=>o.phone===currentUser.phone);
-    const listEl=document.getElementById('custOrdersList');
-    if(listEl){
-      listEl.innerHTML = myOrders.length===0
-        ?'<div style="text-align:center;padding:2rem;color:#aaa;font-weight:700;">No orders yet. 🛒</div>'
-        :myOrders.map(o=>{
-          const d=o.createdAt?.toDate?o.createdAt.toDate():new Date();
-          return `<div class="order-hist-item">
-            <div class="order-hist-date"><div class="order-hist-day">${d.getDate()}</div><div class="order-hist-mon">${d.toLocaleString('en',{month:'short'})}</div></div>
-            <div class="order-hist-items"><div class="order-hist-name">${o.items}</div><div class="order-hist-sub">${o.id}</div></div>
-            <div class="order-hist-right"><div class="order-hist-total">${o.total}</div>
-            <span class="order-hist-badge ${o.status==='Delivered'?'ohb-green':o.status==='Preparing'?'ohb-amber':'ohb-red'}">${o.status}</span></div>
-          </div>`;
-        }).join('');
-    }
-  }
+  refreshCustomerOrders();
 });
 
 // CUSTOMERS
@@ -5660,17 +5695,29 @@ confirmPayment=async function(){
   const cartSnapshot=[...cart];
   const totalAmt=cartSnapshot.reduce((s,c)=>s+c.price*c.qty,0);
   const orderId='#'+Math.floor(1000+Math.random()*9000);
-  const orderDoc={id:orderId,customer:currentUser?.name||'Guest',phone:currentUser?.phone||'',items:cartSnapshot.map(c=>`${c.name} ×${c.qty}`).join(', '),total:`₹${totalAmt}`,status:'Preparing',note,time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+  const orderDoc={id:orderId,customer:currentUser?.name||'Guest',phone:currentUser?.phone||'',uid:currentUser?.uid||'',email:currentUser?.email||'',items:cartSnapshot.map(c=>`${c.name} ×${c.qty}`).join(', '),total:`₹${totalAmt}`,status:'Preparing',note,time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),createdAt:firebase.firestore.FieldValue.serverTimestamp()};
   await db.collection('orders').add(orderDoc);
   await db.collection('payment_requests').add({id:orderId,customer:currentUser?.name||'Guest',items:orderDoc.items,amount:`₹${totalAmt}`,status:'Pending',time:orderDoc.time,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-  if(currentUser?.phone){
-    const snap=await db.collection('customers').where('phone','==',currentUser.phone).get();
-    if(snap.empty){await db.collection('customers').add({name:currentUser.name||'Guest',phone:currentUser.phone,email:'',orders:1,total:`₹${totalAmt}`,status:'Active',fav:cartSnapshot[0]?.name||'',last:'Today',loyalty:'None',createdAt:firebase.firestore.FieldValue.serverTimestamp()});}
-    else{const doc=snap.docs[0];const prev=doc.data();await db.collection('customers').doc(doc.id).update({orders:(prev.orders||0)+1,total:`₹${parseInt((prev.total||'₹0').replace(/[₹,]/g,''))+totalAmt}`,last:'Today'});}
+  // Update customer record — check by uid (Google login) OR phone
+  const custQuery = currentUser?.uid
+    ? db.collection('customers').where('uid','==',currentUser.uid)
+    : currentUser?.phone
+      ? db.collection('customers').where('phone','==',currentUser.phone)
+      : null;
+  if(custQuery){
+    const snap=await custQuery.get();
+    if(snap.empty){
+      await db.collection('customers').add({name:currentUser.name||'Guest',phone:currentUser.phone||'',email:currentUser.email||'',uid:currentUser.uid||'',orders:1,total:`₹${totalAmt}`,status:'Active',fav:cartSnapshot[0]?.name||'',last:'Today',loyalty:'None',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    } else {
+      const doc=snap.docs[0];const prev=doc.data();
+      await db.collection('customers').doc(doc.id).update({orders:(prev.orders||0)+1,total:`₹${parseInt((prev.total||'₹0').replace(/[₹,]/g,''))+totalAmt}`,last:'Today'});
+    }
   }
   closePayModal(); cart=[]; if(document.getElementById('orderNote')) document.getElementById('orderNote').value='';
   updateCartUI(); showToast('✅ Order placed! 🎉');
   setTimeout(()=>showToast('📋 '+orderId+' is being prepared...'),3000);
+  // Immediately refresh customer order history
+  refreshCustomerOrders();
   // Show review modal after 8 seconds
   setTimeout(()=>{ if(currentUser) openReviewModal(); }, 8000);
   const cartSummary=cartSnapshot.map(c=>`${c.emoji} ${c.name} ×${c.qty} — ₹${c.price*c.qty}`).join('\n');
