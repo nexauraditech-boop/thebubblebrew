@@ -224,9 +224,9 @@ nav a:hover,nav a.active{color:var(--brown);border-bottom-color:var(--brown);}
 .admin-btn:hover{background:var(--dark)!important;color:#fff!important;}
 
 /* ─── HERO ─── */
-#home{padding-top:64px;}
+#home{padding-top:0;}
 .hero{
-  height:100vh;position:relative;overflow:hidden;
+  height:100vh;position:relative;overflow:hidden;padding-top:64px;
   background: linear-gradient(160deg,#3b1f0a 0%,#5c3317 40%,#2c1a0e 100%);
   display:flex;align-items:center;justify-content:center;text-align:center;
 }
@@ -825,13 +825,15 @@ tbody tr:last-child td{border-bottom:none;}
 <!-- ═══════════ HOME PAGE ═══════════ -->
 
 <!-- ═══════════ BANNER STRIP ═══════════ -->
+
+<div id="home" class="page active">
+
+<!-- Banner strip inside home page -->
 <div class="banner-strip" id="homeBannerStrip" style="display:none;">
   <div class="banner-strip-track" id="bannerStripTrack">
     <!-- filled by JS -->
   </div>
 </div>
-
-<div id="home" class="page active">
 
   <!-- Hero -->
   <section class="hero">
@@ -5530,10 +5532,14 @@ addNewBanner=async function(){
   const icon=document.getElementById('nb_icon')?.value?.trim()||'📢';
   const name=document.getElementById('nb_name')?.value?.trim();
   const note=document.getElementById('nb_note')?.value?.trim()||'Custom banner';
+  const color=document.getElementById('nb_color')?.value||'#5c3317';
+  const textColor=document.getElementById('nb_textcolor')?.value||'#f5ede0';
   if(!name){showToast('⚠️ Please enter a banner name!');return;}
-  await db.collection('banners').add({icon,name,note,on:false,order:bannersData.length,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  await db.collection('banners').add({icon,name,note,on:false,color,textColor,order:bannersData.length,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
   document.getElementById('addBannerForm').style.display='none';
   ['nb_icon','nb_name','nb_note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  if(document.getElementById('nb_color')) document.getElementById('nb_color').value='#5c3317';
+  if(document.getElementById('nb_textcolor')) document.getElementById('nb_textcolor').value='#f5ede0';
   showToast(`✨ "${name}" banner added!`);
 };
 
@@ -5543,6 +5549,13 @@ toggleBanner=async function(i,el){
   if(b?.firestoreId) await db.collection('banners').doc(b.firestoreId).update({on:newOn});
   renderBannerStrip();
   showToast(`${newOn?'✅ On':'⛔ Off'} — ${b.name}`);
+};
+
+updateBannerColor=async function(i, prop, value){
+  bannersData[i][prop] = value;
+  if(bannersData[i]?.firestoreId) await db.collection('banners').doc(bannersData[i].firestoreId).update({[prop]:value});
+  renderBannerStrip();
+  showToast(`🎨 Banner color updated!`);
 };
 
 deleteBanner=async function(i){
