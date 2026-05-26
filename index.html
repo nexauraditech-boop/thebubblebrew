@@ -224,9 +224,9 @@ nav a:hover,nav a.active{color:var(--brown);border-bottom-color:var(--brown);}
 .admin-btn:hover{background:var(--dark)!important;color:#fff!important;}
 
 /* ─── HERO ─── */
-#home{padding-top:0;}
+#home{padding-top:64px;}
 .hero{
-  height:100vh;position:relative;overflow:hidden;padding-top:64px;
+  height:100vh;position:relative;overflow:hidden;
   background: linear-gradient(160deg,#3b1f0a 0%,#5c3317 40%,#2c1a0e 100%);
   display:flex;align-items:center;justify-content:center;text-align:center;
 }
@@ -828,13 +828,6 @@ tbody tr:last-child td{border-bottom:none;}
 
 <div id="home" class="page active">
 
-<!-- Banner strip inside home page -->
-<div class="banner-strip" id="homeBannerStrip" style="display:none;">
-  <div class="banner-strip-track" id="bannerStripTrack">
-    <!-- filled by JS -->
-  </div>
-</div>
-
   <!-- Hero -->
   <section class="hero">
     <div class="hero-bg"></div>
@@ -857,6 +850,11 @@ tbody tr:last-child td{border-bottom:none;}
       <div class="scroll-line"></div>
     </div>
   </section>
+
+  <!-- ── BANNER STRIP ── -->
+  <div class="banner-strip" id="homeBannerStrip" style="display:none;">
+    <div class="banner-strip-track" id="bannerStripTrack"></div>
+  </div>
 
   <!-- Signature Dishes -->
   <section style="background:var(--cream);padding:5rem 2rem;" id="dishes">
@@ -1400,7 +1398,7 @@ tbody tr:last-child td{border-bottom:none;}
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
         Continue with Google
       </button>
-      <div style="font-size:0.7rem;color:#aaa;font-weight:600;text-align:center;margin-top:0.25rem;">Google login activates on Netlify deployment</div>
+      <div style="font-size:0.7rem;color:#aaa;font-weight:600;text-align:center;margin-top:0.25rem;">Google login activates on deployed site (Vercel/Netlify)</div>
     </div>
 
     <!-- Step 2: OTP -->
@@ -4708,7 +4706,7 @@ function closeModal(e){
 
 // ────── LOCAL LOYALTY / PAYMENT (without Firebase) ──────
 window.signInWithGoogle = function(){
-  showToast('⚠️ Google login requires Netlify deployment. On local file, use direct name login below.');
+  showToast('⚠️ Google login works on deployed site. Local file માં Guest login વાપરો.');
   // Show name input fallback for local mode
   const step1 = document.getElementById('otpStep1');
   if(step1){
@@ -5182,15 +5180,25 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 async function signInWithGoogle(){
   try{
     showToast('⏳ Google login...');
-    await auth.signInWithRedirect(googleProvider);
+    const result = await auth.signInWithPopup(googleProvider);
+    if(result && result.user){
+      await handleGoogleLogin(result.user);
+      closeOTPModal();
+    }
   } catch(e){
-    showToast('❌ Login failed. Try again.');
+    if(e.code === 'auth/popup-blocked'){
+      showToast('⚠️ Popup blocked! Firebase Console માં તમારો domain add કરો.');
+    } else if(e.code === 'auth/unauthorized-domain'){
+      showToast('⚠️ Domain authorized નથી — Firebase Console → Authentication → Authorized domains માં Vercel URL add કરો.');
+    } else {
+      showToast('❌ Login failed: ' + (e.message||e.code||'Unknown error'));
+    }
     console.error(e);
   }
 }
 window.signInWithGoogle = signInWithGoogle;
 
-// Handle redirect result on page load
+// Handle redirect result on page load (fallback)
 auth.getRedirectResult().then(async result=>{
   if(result && result.user){
     await handleGoogleLogin(result.user);
