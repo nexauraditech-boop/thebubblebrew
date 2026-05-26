@@ -1228,20 +1228,17 @@ tbody tr:last-child td{border-bottom:none;}
   </div>
   <div class="cust-body">
     <div class="cust-tabs">
-      <div class="cust-tab active" onclick="showCustTab('orders',this)">📋 Order History</div>
-      <div class="cust-tab" onclick="showCustTab('loyalty',this)">⭐ Brew Passport</div>
+      <div class="cust-tab active" onclick="showCustTab('loyalty',this)">⭐ Brew Passport</div>
       <div class="cust-tab" onclick="showCustTab('profile',this)">👤 Profile</div>
     </div>
 
-    <!-- Orders Tab -->
-    <div id="custTabOrders">
-      <div id="custOrdersList">
-        <div style="text-align:center;padding:2rem;color:#aaa;font-weight:700;">⏳ Loading your orders...</div>
-      </div>
+    <!-- Orders Tab (hidden from customer) -->
+    <div id="custTabOrders" style="display:none;">
+      <div id="custOrdersList"></div>
     </div>
 
     <!-- Loyalty Tab -->
-    <div id="custTabLoyalty" style="display:none;">
+    <div id="custTabLoyalty">
 
       <!-- Tier Selection Tabs -->
       <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;overflow-x:auto;scrollbar-width:none;">
@@ -1258,7 +1255,7 @@ tbody tr:last-child td{border-bottom:none;}
           <div class="loyalty-sub" id="loyaltyCardSub">Entry Level Member</div>
           <div class="loyalty-stamps" id="loyaltyStamps"></div>
           <div class="loyalty-progress-text" id="loyaltyProgressText">0 / 8 stamps</div>
-          <div class="loyalty-points-row">
+          <div class="loyalty-points-row" style="display:none;">
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="loyaltyStampCount">0</div><div class="loyalty-point-label">Stamps</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="loyaltyFreeDrinks">0</div><div class="loyalty-point-label">Free Drinks</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="loyaltyPoints">0</div><div class="loyalty-point-label">Points</div></div>
@@ -1288,7 +1285,7 @@ tbody tr:last-child td{border-bottom:none;}
           <div class="loyalty-sub">Regular Member</div>
           <div class="loyalty-stamps" id="pearlStamps"></div>
           <div class="loyalty-progress-text" id="pearlProgressText">0 / 8 stamps</div>
-          <div class="loyalty-points-row">
+          <div class="loyalty-points-row" style="display:none;">
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="pearlStampCount">0</div><div class="loyalty-point-label">Stamps</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="pearlFreeDrinks">0</div><div class="loyalty-point-label">Free Drinks</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="pearlPoints">0</div><div class="loyalty-point-label">Points</div></div>
@@ -1319,7 +1316,7 @@ tbody tr:last-child td{border-bottom:none;}
           <div class="loyalty-sub">VIP Member</div>
           <div class="loyalty-stamps" id="goldenStamps"></div>
           <div class="loyalty-progress-text" id="goldenProgressText">0 / 8 stamps</div>
-          <div class="loyalty-points-row">
+          <div class="loyalty-points-row" style="display:none;">
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="goldenStampCount">0</div><div class="loyalty-point-label">Stamps</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="goldenFreeDrinks">0</div><div class="loyalty-point-label">Free Drinks</div></div>
             <div class="loyalty-point-box"><div class="loyalty-point-val" id="goldenPoints">0</div><div class="loyalty-point-label">Points</div></div>
@@ -1398,7 +1395,7 @@ tbody tr:last-child td{border-bottom:none;}
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
         Continue with Google
       </button>
-      <div style="font-size:0.7rem;color:#aaa;font-weight:600;text-align:center;margin-top:0.25rem;">Google login activates on deployed site (Vercel/Netlify)</div>
+
     </div>
 
     <!-- Step 2: OTP -->
@@ -3992,14 +3989,14 @@ function renderDishesAdminHTML(){
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group" style="flex:1;"><label>Emoji (photo na hoy to)</label><input id="ed_emoji_${i}" type="text" value="${d.emoji}" style="font-size:1.4rem;text-align:center;"/></div>
+        <div class="form-group" style="flex:1;"><label>Emoji (if no photo)</label><input id="ed_emoji_${i}" type="text" value="${d.emoji}" style="font-size:1.4rem;text-align:center;"/></div>
         <div class="form-group" style="flex:3;"><label>Dish Name</label><input id="ed_name_${i}" type="text" value="${d.name.replace(/"/g,'&quot;')}"/></div>
       </div>
       <div class="form-group"><label>Description</label><input id="ed_desc_${i}" type="text" value="${d.desc.replace(/"/g,'&quot;')}"/></div>
       <div class="form-row">
         <div class="form-group"><label>Price (₹)</label><input id="ed_price_${i}" type="number" value="${d.price}"/></div>
         <div class="form-group"><label>Tag / Badge</label><input id="ed_tag_${i}" type="text" value="${(d.tag||'').replace(/"/g,'&quot;')}"/></div>
-        <div class="form-group"><label>BG Color (photo na hoy to)</label><input id="ed_bg_${i}" type="text" value="${d.bg||'#5c3317'}"/></div>
+        <div class="form-group"><label>BG Color (if no photo)</label><input id="ed_bg_${i}" type="text" value="${d.bg||'#5c3317'}"/></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:0.75rem;">
         <button class="btn-sm" onclick="saveSignatureDishEdit(${i})">💾 Save</button>
@@ -4708,7 +4705,7 @@ function closeModal(e){
 
 // ────── LOCAL LOYALTY / PAYMENT (without Firebase) ──────
 window.signInWithGoogle = function(){
-  showToast('⚠️ Google login works on deployed site. Local file માં Guest login વાપરો.');
+  showToast('⚠️ Google login works on the deployed site. Please use Guest login here.');
   // Show name input fallback for local mode
   const step1 = document.getElementById('otpStep1');
   if(step1){
@@ -5189,9 +5186,9 @@ async function signInWithGoogle(){
     }
   } catch(e){
     if(e.code === 'auth/popup-blocked'){
-      showToast('⚠️ Popup blocked! Firebase Console માં તમારો domain add કરો.');
+      showToast('⚠️ Popup blocked! Please add your domain in Firebase Console.');
     } else if(e.code === 'auth/unauthorized-domain'){
-      showToast('⚠️ Domain authorized નથી — Firebase Console → Authentication → Authorized domains માં Vercel URL add કરો.');
+      showToast('⚠️ Domain not authorized — add your Vercel URL in Firebase Console → Authentication → Authorized domains.');
     } else {
       showToast('❌ Login failed: ' + (e.message||e.code||'Unknown error'));
     }
