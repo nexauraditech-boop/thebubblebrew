@@ -528,6 +528,8 @@ tbody tr:last-child td{border-bottom:none;}
 
 /* Banner toggle */
 .banner-row{display:flex;align-items:center;justify-content:space-between;padding:1rem;background:#f5f0eb;border-radius:8px;margin-bottom:0.75rem;border:1px solid rgba(92,51,23,0.1);}
+@keyframes bannerScroll{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
+.banner-scroll{display:inline-block;animation:bannerScroll 18s linear infinite;}
 .toggle{width:44px;height:24px;background:#ccbba8;border-radius:12px;cursor:pointer;position:relative;transition:background 0.3s;}
 .toggle.on{background:var(--brown);}
 .toggle::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left 0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);}
@@ -740,35 +742,6 @@ tbody tr:last-child td{border-bottom:none;}
   .form-row{grid-template-columns:1fr;}
   .dash-stats{grid-template-columns:repeat(2,1fr);}
 }
-
-/* ─── HOMEPAGE BANNER STRIP ─── */
-.banner-strip{
-  background:var(--brown);
-  padding:0;
-  overflow:hidden;
-  position:relative;
-  z-index:10;
-}
-.banner-strip-track{
-  display:flex;
-  gap:0;
-  animation:bannerScroll 28s linear infinite;
-  width:max-content;
-}
-.banner-strip:hover .banner-strip-track{ animation-play-state:paused; }
-@keyframes bannerScroll{
-  0%{transform:translateX(0);}
-  100%{transform:translateX(-50%);}
-}
-.banner-item{
-  display:flex;align-items:center;gap:10px;
-  padding:11px 32px;
-  color:#f5ede0;
-  font-size:0.82rem;font-weight:700;letter-spacing:0.05em;
-  white-space:nowrap;border-right:1px solid rgba(245,237,224,0.2);
-}
-.banner-item .b-icon{font-size:1rem;}
-.banner-item .b-sep{color:rgba(245,237,224,0.4);margin:0 8px;}
 </style>
   <!-- Firebase SDK — must load first -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -823,10 +796,12 @@ tbody tr:last-child td{border-bottom:none;}
 </div>
 
 <!-- ═══════════ HOME PAGE ═══════════ -->
-
-<!-- ═══════════ BANNER STRIP ═══════════ -->
-
 <div id="home" class="page active">
+
+  <!-- Banner Bar — shows active banners -->
+  <div id="bannerBar" style="display:none;background:var(--brown);color:#fff;padding:10px 1.5rem;text-align:center;font-size:0.82rem;font-weight:700;letter-spacing:0.05em;overflow:hidden;">
+    <div id="bannerBarText" style="white-space:nowrap;"></div>
+  </div>
 
   <!-- Hero -->
   <section class="hero">
@@ -850,11 +825,6 @@ tbody tr:last-child td{border-bottom:none;}
       <div class="scroll-line"></div>
     </div>
   </section>
-
-  <!-- ── BANNER STRIP ── -->
-  <div class="banner-strip" id="homeBannerStrip" style="display:none;">
-    <div class="banner-strip-track" id="bannerStripTrack"></div>
-  </div>
 
   <!-- Signature Dishes -->
   <section style="background:var(--cream);padding:5rem 2rem;" id="dishes">
@@ -968,8 +938,8 @@ tbody tr:last-child td{border-bottom:none;}
           <div><div class="contact-label">Email</div><div class="contact-value" id="contactEmail">hello@thebubble.brew</div></div>
         </div>
         <div class="timing-row">
-          <div class="timing-card"><div class="timing-day">Mon – Sat</div><div class="timing-time" id="contactTimingWeekday">8:00 AM – 10:00 PM</div></div>
-          <div class="timing-card"><div class="timing-day">Sunday</div><div class="timing-time" id="contactTimingWeekend">Closed</div></div>
+          <div class="timing-card"><div class="timing-day">Mon – Fri</div><div class="timing-time" id="contactTimingWeekday">8:00 AM – 10:00 PM</div></div>
+          <div class="timing-card"><div class="timing-day">Sat – Sun</div><div class="timing-time" id="contactTimingWeekend">9:00 AM – 11:00 PM</div></div>
         </div>
       </div>
       <div class="contact-form">
@@ -1352,7 +1322,7 @@ tbody tr:last-child td{border-bottom:none;}
       <div class="admin-card" style="max-width:500px;">
         <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:#000;margin-bottom:1.25rem;">Profile Details</div>
         <div class="form-group"><label>Full Name</label><input type="text" id="profName" value=""/></div>
-        <div class="form-group"><label>Phone Number</label><input type="tel" id="profPhone" placeholder="+91 XXXXX XXXXX" style="background:#fff;"/></div>
+        <div class="form-group"><label>Phone Number</label><input type="tel" id="profPhone" value="+91 98765 43210" readonly style="background:#f5f0eb;"/></div>
         <div class="form-group"><label>Email</label><input type="email" id="profEmail" placeholder="your@email.com"/></div>
         <button class="btn-sm" onclick="saveCustomerProfile()">Save Changes</button>
         <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid #f5f0eb;">
@@ -1398,8 +1368,6 @@ tbody tr:last-child td{border-bottom:none;}
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
         Continue with Google
       </button>
-
-
     </div>
 
     <!-- Step 2: OTP -->
@@ -1440,17 +1408,17 @@ tbody tr:last-child td{border-bottom:none;}
 
     <!-- UPI App Buttons -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:1rem;">
-      <button onclick="openUPI('gpay')" style="padding:14px 8px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:900;font-size:0.95rem;color:#000;transition:all 0.2s;" onmouseover="this.style.borderColor='#4285f4';this.style.background='#f0f7ff'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
-        Google Pay
+      <button onclick="openUPI('gpay')" style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:800;font-size:0.82rem;justify-content:center;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/512px-Google_Pay_Logo.svg.png" style="height:22px;"/> Google Pay
       </button>
-      <button onclick="openUPI('phonepe')" style="padding:14px 8px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:900;font-size:0.95rem;color:#000;transition:all 0.2s;" onmouseover="this.style.borderColor='#5f259f';this.style.background='#f9f0ff'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
-        PhonePe
+      <button onclick="openUPI('phonepe')" style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:800;font-size:0.82rem;justify-content:center;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/PhonePe_Logo.svg/512px-PhonePe_Logo.svg.png" style="height:22px;"/> PhonePe
       </button>
-      <button onclick="openUPI('paytm')" style="padding:14px 8px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:900;font-size:0.95rem;color:#000;transition:all 0.2s;" onmouseover="this.style.borderColor='#00BAF2';this.style.background='#f0fbff'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
-        Paytm
+      <button onclick="openUPI('paytm')" style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:800;font-size:0.82rem;justify-content:center;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Paytm_logo.png/320px-Paytm_logo.png" style="height:20px;"/> Paytm
       </button>
-      <button onclick="openUPI('bhim')" style="padding:14px 8px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:900;font-size:0.95rem;color:#000;transition:all 0.2s;" onmouseover="this.style.borderColor='#1a73e8';this.style.background='#f0f7ff'" onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#fff'">
-        BHIM / Any UPI
+      <button onclick="openUPI('bhim')" style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:800;font-size:0.82rem;justify-content:center;">
+        💙 BHIM / Any UPI
       </button>
     </div>
 
@@ -1544,7 +1512,8 @@ function initFromLocalStorage(){
 
   // 3. Banners
   const savedBanners = loadFromLocal('bb_banners', null);
-  if(savedBanners){ bannersData = savedBanners; }
+  if(savedBanners) bannersData = savedBanners;
+  renderHomepageBanners();
 
   // 4. Loyalty config
   const savedLoyalty = loadFromLocal('bb_loyalty_config', null);
@@ -1652,30 +1621,6 @@ function initFromLocalStorage(){
   if(savedDishes && savedDishes.length) signatureDishesData = savedDishes;
   renderSignatureDishes();
 
-  // 12. Customer profile restore
-  try{
-    const _prof = JSON.parse(localStorage.getItem('bb_profile')||'null');
-    if(_prof && _prof.name){
-      if(!currentUser) currentUser = {};
-      Object.assign(currentUser, _prof);
-      const pn = document.getElementById('profName');   if(pn) pn.value = _prof.name;
-      const pe = document.getElementById('profEmail');  if(pe) pe.value = _prof.email||'';
-      const pp = document.getElementById('profPhone');  if(pp && _prof.phone) pp.value = _prof.phone;
-      const cn = document.getElementById('custName');   if(cn) cn.textContent = _prof.name;
-      const cp = document.getElementById('custPhone');  if(cp && _prof.phone) cp.textContent = _prof.phone;
-      // Show My Account button if profile exists
-      const dashBtn = document.getElementById('dashNavBtn');
-      const loginBtn = document.getElementById('loginNavBtn');
-      if(dashBtn && loginBtn && _prof.name){
-        dashBtn.style.display='inline-block';
-        dashBtn.textContent = _prof.name.split(' ')[0];
-        loginBtn.style.display='none';
-      }
-    }
-  }catch(e){}
-
-  // Render banner strip from saved data
-  renderBannerStrip();
   console.log('✅ LocalStorage data restored!');
 }
 // ════════════════════════════════════════════════
@@ -1816,25 +1761,14 @@ function confirmPayment(){
   const note = document.getElementById('orderNote')?.value?.trim() || '';
   const cartSnapshot = [...cart];
   const totalAmt = cartSnapshot.reduce((s,c)=>s+c.price*c.qty,0);
-  const orderId = '#'+Math.floor(1000+Math.random()*9000);
-  // Save order locally so customer order history works
-  const orderDoc = {
-    id:orderId, customer:currentUser?.name||'Guest',
-    phone:currentUser?.phone||'', uid:currentUser?.uid||'', email:currentUser?.email||'',
-    items:cartSnapshot.map(c=>`${c.name} ×${c.qty}`).join(', '),
-    total:`₹${totalAmt}`, status:'Preparing', note,
-    time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
-    createdAt:{toDate:()=>new Date()}
-  };
-  ordersData.unshift(orderDoc);
   closePayModal();
   cart = [];
   document.getElementById('orderNote').value = '';
   updateCartUI();
-  refreshCustomerOrders();
-  showToast('✅ Payment confirmed! Order placed. 🎉');
-  setTimeout(()=>showToast('📋 '+orderId+' is being prepared...'),3500);
+  showToast('✅ Payment confirmed! Order placed. We\'ll notify you shortly! 🎉');
+  setTimeout(()=>showToast('📋 Order #1043 is being prepared...'),3500);
   setTimeout(()=>{ if(currentUser) openReviewModal(); }, 8000);
+  // WhatsApp to cafe with note
   const cartSummary = cartSnapshot.map(c=>`${c.emoji} ${c.name} ×${c.qty} — ₹${c.price*c.qty}`).join('\n');
   const noteStr = note ? `\n\n📝 Special Note: ${note}` : '';
   sendOrderWhatsApp(`📦 Items:\n${cartSummary}\n\n💰 Total: ₹${totalAmt}${noteStr}`);
@@ -1899,34 +1833,27 @@ function verifyOTP(){
 function saveCustomerProfile(){
   const name  = document.getElementById('profName')?.value?.trim();
   const email = document.getElementById('profEmail')?.value?.trim();
-  const phone = document.getElementById('profPhone')?.value?.trim();
   if(!name){ showToast('⚠️ Please enter your name!'); return; }
 
-  if(currentUser){ currentUser.name=name; if(email) currentUser.email=email; if(phone) currentUser.phone=phone; }
-  else currentUser={name,email:email||'',phone:phone||''};
+  if(currentUser){ currentUser.name=name; if(email) currentUser.email=email; }
+  else currentUser={name,email:email||''};
 
   // Save to localStorage — persists on reload
-  try{ localStorage.setItem('bb_profile',JSON.stringify({
-    name, email:email||'', phone:phone||currentUser?.phone||'', uid:currentUser?.uid||''
-  })); }catch(e){}
+  try{ localStorage.setItem('bb_profile',JSON.stringify({name,email:email||'',phone:currentUser?.phone||'',uid:currentUser?.uid||''})); }catch(e){}
 
   // Update UI
   ['custName'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=name;});
   ['loyaltyCardName','pearlCardName','goldenCardName'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=name;});
   const dashBtn=document.getElementById('dashNavBtn');
   if(dashBtn) dashBtn.textContent=name.split(' ')[0];
-  const custPhoneEl=document.getElementById('custPhone');
-  if(custPhoneEl && phone) custPhoneEl.textContent=phone;
 
   // Save to Firestore
   if(typeof db!=='undefined'&&db&&currentUser?.uid){
     db.collection('customers').where('uid','==',currentUser.uid).get().then(snap=>{
-      if(!snap.empty) snap.docs[0].ref.update({name,email:email||'',phone:phone||''});
-      else db.collection('customers').add({name,email:email||'',uid:currentUser.uid,phone:phone||'',orders:0,total:'₹0',status:'Active',loyalty:'None',last:'Today',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      if(!snap.empty) snap.docs[0].ref.update({name,email:email||''});
+      else db.collection('customers').add({name,email:email||'',uid:currentUser.uid,phone:currentUser.phone||'',orders:0,total:'₹0',status:'Active',loyalty:'None',last:'Today',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     });
   }
-  const _db=document.getElementById('dashNavBtn');
-  if(_db) _db.textContent=name.split(' ')[0];
   showToast('✅ Profile saved!');
 }
 
@@ -1946,19 +1873,12 @@ function saveCustomerProfile(){
 
 function logoutCustomer(){
   currentUser = null;
-  // Clear customer session and profile
+  // Clear only customer session (not admin session)
   localStorage.removeItem('bb_customer_session');
   localStorage.removeItem('bb_customer_phone');
-  localStorage.removeItem('bb_profile');
   document.getElementById('loginNavBtn').style.display='block';
   document.getElementById('dashNavBtn').style.display='none';
   document.getElementById('notifWrap').style.display='none';
-  // Reset profile fields
-  const _pn=document.getElementById('profName'); if(_pn) _pn.value='';
-  const _pe=document.getElementById('profEmail'); if(_pe) _pe.value='';
-  const _pp=document.getElementById('profPhone'); if(_pp) _pp.value='';
-  const _cn=document.getElementById('custName'); if(_cn) _cn.textContent='Welcome!';
-  const _cp=document.getElementById('custPhone'); if(_cp) _cp.textContent='+91 XXXXX XXXXX';
   showPage('home');
   showToast('👋 Logged out successfully');
 }
@@ -2042,9 +1962,6 @@ function showCustTab(tab, el){
   document.getElementById('custTabLoyalty').style.display='none';
   document.getElementById('custTabProfile').style.display='none';
   document.getElementById('custTab'+tab.charAt(0).toUpperCase()+tab.slice(1)).style.display='block';
-  // Refresh data when tab is opened
-  if(tab==='orders') refreshCustomerOrders();
-  if(tab==='loyalty') updateAllTierCards();
 }
 
 // ────── ROUTING ──────
@@ -2058,7 +1975,6 @@ function showPage(id){
   }
   if(id==='menu') renderMenu('all');
   if(id==='customer' && !currentUser){ showPage('home'); openOTPModal(); return; }
-  if(id==='customer' && currentUser){ refreshCustomerOrders(); updateAllTierCards(); }
 }
 function setActive(el){
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
@@ -2263,70 +2179,6 @@ function doLogout(){
 
 
 // ────── ADMIN SECTIONS ──────
-
-function buildSettingsHTML(_s, _wa){
-  return `
-    <h2 class="admin-section-title">⚙️ Settings</h2>
-
-    <!-- STORE INFO -->
-    <div class="admin-card" style="max-width:600px;margin-bottom:1.25rem;">
-      <h3 style="font-family:'Playfair Display',serif;color:#000;margin-bottom:1.25rem;font-weight:900;">🏪 Store Information</h3>
-      <div class="form-group"><label>Cafe Name</label><input id="settingCafe" type="text" value="${_s.cafeName||'thebubble.brew'}"/></div>
-      <div class="form-group"><label>Tagline</label><input id="settingTagline" type="text" value="${_s.tagline||'Sip. Chill. Repeat.'}"/></div>
-      <div class="form-group"><label>Email</label><input id="settingEmail" type="email" value="${_s.email||'hello@thebubble.brew'}"/></div>
-      <div class="form-group"><label>Phone</label><input id="settingPhone" type="tel" value="${_s.phone||'+91 98765 43210'}"/></div>
-      <div class="form-group"><label>Address</label><textarea id="settingAddr">${_s.address||'thebubble.brew, Main Street, City — 380001'}</textarea></div>
-      <div style="font-family:'Playfair Display',serif;font-size:0.9rem;font-weight:900;color:#000;margin-bottom:0.5rem;">🕐 Timings</div>
-      <div class="form-row">
-        <div class="form-group"><label>Mon–Sat Open</label><input id="settingOpen" type="time" value="${_s.openTime||'08:00'}"/></div>
-        <div class="form-group"><label>Mon–Sat Close</label><input id="settingClose" type="time" value="${_s.closeTime||'22:00'}"/></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Sunday</label><input id="settingOpenWE" type="text" value="Closed" disabled style="background:#f0f0f0;color:#888;cursor:not-allowed;"/></div>
-        <div class="form-group"><label>&nbsp;</label><input id="settingCloseWE" type="text" value="Closed" disabled style="background:#f0f0f0;color:#888;cursor:not-allowed;"/></div>
-      </div>
-      <button class="btn-sm" onclick="saveSettings()">💾 Save Store Info</button>
-    </div>
-
-    <!-- WHATSAPP -->
-    <div class="admin-card" style="max-width:600px;margin-bottom:1.25rem;">
-      <h3 style="font-family:'Playfair Display',serif;color:#000;margin-bottom:1.25rem;font-weight:900;">💬 WhatsApp Number</h3>
-      <p style="font-size:0.82rem;color:var(--muted);font-weight:600;margin-bottom:1rem;">Table bookings and orders will be sent to this number. Include country code.</p>
-      <div class="form-group">
-        <label>WhatsApp Number</label>
-        <input id="settingWA" type="text" placeholder="919876543210" value="${_wa}" style="font-size:1rem;letter-spacing:0.05em;"/>
-      </div>
-      <button class="btn-sm" onclick="saveWhatsApp()">💾 Save WhatsApp</button>
-    </div>
-
-    <!-- ADMIN CREDENTIALS -->
-    <div class="admin-card" style="max-width:600px;margin-bottom:1.25rem;border:2px solid rgba(220,38,38,0.2);background:#fffbfb;">
-      <h3 style="font-family:'Playfair Display',serif;color:#b91c1c;margin-bottom:0.5rem;font-weight:900;">🔐 Admin Credentials</h3>
-      <p style="font-size:0.82rem;color:#888;font-weight:600;margin-bottom:1.25rem;">Change username and password — only you should know this. Remember it!</p>
-      <div class="form-group">
-        <label>New Username</label>
-        <input id="newUsername" type="text" placeholder="New username" autocomplete="off"/>
-      </div>
-      <div class="form-group" style="position:relative;">
-        <label>Current Password (to verify)</label>
-        <input id="currentPass" type="password" placeholder="Current password" autocomplete="off"/>
-        <span onclick="togglePassVis('currentPass',this)" style="position:absolute;right:12px;top:38px;cursor:pointer;">👁</span>
-      </div>
-      <div class="form-group" style="position:relative;">
-        <label>New Password</label>
-        <input id="newPass" type="password" placeholder="Min 6 characters" autocomplete="off"/>
-        <span onclick="togglePassVis('newPass',this)" style="position:absolute;right:12px;top:38px;cursor:pointer;">👁</span>
-      </div>
-      <div class="form-group" style="position:relative;">
-        <label>Confirm New Password</label>
-        <input id="confirmPass" type="password" placeholder="Re-enter new password" autocomplete="off"/>
-        <span onclick="togglePassVis('confirmPass',this)" style="position:absolute;right:12px;top:38px;cursor:pointer;">👁</span>
-      </div>
-      <div id="credError" style="display:none;background:#fee2e2;border:1.5px solid #ef4444;border-radius:8px;padding:10px 14px;font-size:0.82rem;font-weight:700;color:#b91c1c;margin-bottom:1rem;"></div>
-      <button class="btn-sm" style="background:#b91c1c;" onclick="changeCredentials()">🔐 Update Credentials</button>
-    </div>`;
-}
-
 function showAdminSection(sec, el){
   if(el){document.querySelectorAll('.sidebar-item').forEach(s=>s.classList.remove('active'));el.classList.add('active');}
   const c=document.getElementById('adminContent');
@@ -2686,22 +2538,6 @@ function showAdminSection(sec, el){
         <label>Description / Note</label>
         <input id="nb_note" type="text" placeholder="e.g. Valid weekends only"/>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>🎨 Banner Background Color</label>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <input id="nb_color" type="color" value="#5c3317" style="width:48px;height:36px;border:none;cursor:pointer;border-radius:6px;"/>
-            <input id="nb_color_text" type="text" value="#5c3317" placeholder="#5c3317" oninput="document.getElementById('nb_color').value=this.value" style="flex:1;font-size:0.85rem;font-weight:700;"/>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>🔤 Text Color</label>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <input id="nb_textcolor" type="color" value="#f5ede0" style="width:48px;height:36px;border:none;cursor:pointer;border-radius:6px;"/>
-            <input id="nb_textcolor_text" type="text" value="#f5ede0" placeholder="#f5ede0" oninput="document.getElementById('nb_textcolor').value=this.value" style="flex:1;font-size:0.85rem;font-weight:700;"/>
-          </div>
-        </div>
-      </div>
       <div style="display:flex;gap:10px;margin-top:0.5rem;">
         <button class="btn-sm" onclick="addNewBanner()">✅ Add Banner</button>
         <button class="btn-sm-outline" onclick="document.getElementById('addBannerForm').style.display='none'">Cancel</button>
@@ -2894,21 +2730,19 @@ function showAdminSection(sec, el){
   }
 
   if(sec==='abouteditor'){
-    // Load saved about data from localStorage first, fallback to DOM
-    const _ab = loadFromLocal('bb_about', null);
     const cur = {
-      heading: (_ab && _ab.heading) || document.getElementById('about_heading')?.innerText || 'Born from Passion, Built with Love',
-      p1:      (_ab && _ab.p1)      || document.getElementById('about_p1')?.innerText      || '',
-      p2:      (_ab && _ab.p2)      || document.getElementById('about_p2')?.innerText      || '',
-      p3:      (_ab && _ab.p3)      || document.getElementById('about_p3')?.innerText      || '',
-      quote:   (_ab && _ab.quote)   || document.getElementById('about_quote')?.innerText   || '',
-      founder: (_ab && _ab.founder) || document.getElementById('about_founder')?.innerText || '',
-      stat1n:  (_ab && _ab.s1n)     || document.getElementById('stat1_num')?.innerText     || '2K+',
-      stat1l:  (_ab && _ab.s1l)     || document.getElementById('stat1_label')?.innerText   || 'Happy Customers',
-      stat2n:  (_ab && _ab.s2n)     || document.getElementById('stat2_num')?.innerText     || '50+',
-      stat2l:  (_ab && _ab.s2l)     || document.getElementById('stat2_label')?.innerText   || 'Menu Items',
-      stat3n:  (_ab && _ab.s3n)     || document.getElementById('stat3_num')?.innerText     || '4.9★',
-      stat3l:  (_ab && _ab.s3l)     || document.getElementById('stat3_label')?.innerText   || 'Google Rating',
+      heading: document.getElementById('about_heading')?.innerText || 'Born from Passion, Built with Love',
+      p1: document.getElementById('about_p1')?.innerText || '',
+      p2: document.getElementById('about_p2')?.innerText || '',
+      p3: document.getElementById('about_p3')?.innerText || '',
+      quote: document.getElementById('about_quote')?.innerText || '',
+      founder: document.getElementById('about_founder')?.innerText || '',
+      stat1n: document.getElementById('stat1_num')?.innerText || '2K+',
+      stat1l: document.getElementById('stat1_label')?.innerText || 'Happy Customers',
+      stat2n: document.getElementById('stat2_num')?.innerText || '50+',
+      stat2l: document.getElementById('stat2_label')?.innerText || 'Menu Items',
+      stat3n: document.getElementById('stat3_num')?.innerText || '4.9★',
+      stat3l: document.getElementById('stat3_label')?.innerText || 'Google Rating',
     };
     c.innerHTML = `
     <h2 class="admin-section-title">📖 About & Founder Editor</h2>
@@ -2991,10 +2825,6 @@ function showAdminSection(sec, el){
   }
 
   if(sec==='loyaltyeditor'){
-    const _lc = loadFromLocal('bb_cards', {});
-    const _sip    = _lc.sip    || {};
-    const _pearl  = _lc.pearl  || {};
-    const _golden = _lc.golden || {};
     c.innerHTML = `
     <h2 class="admin-section-title">🎨 Brew Passport Editor</h2>
     <p style="color:var(--muted);font-size:0.85rem;font-weight:600;margin-bottom:1.5rem;">Edit each loyalty card separately — changes apply to customer cards live.</p>
@@ -3011,14 +2841,16 @@ function showAdminSection(sec, el){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;max-width:900px;">
         <div class="admin-card" style="margin-bottom:0;">
           <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:#5c3317;margin-bottom:1rem;">🥤 Sip Starter Settings</div>
-          <div class="form-group"><label>Card Title</label><input id="ed_sip_title" type="text" value="${_sip.title||'🥤 Sip Starter'}"/></div>
-          <div class="form-group"><label>Level Label</label><input id="ed_sip_level" type="text" value="${_sip.level||'Entry Level Member'}"/></div>
+          <div class="form-group"><label>Card Title</label><input id="ed_sip_title" type="text" value="🥤 Sip Starter"/></div>
+          <div class="form-group"><label>Level Label</label><input id="ed_sip_level" type="text" value="Entry Level Member"/></div>
           <div class="form-group"><label>Perks (one per line)</label>
-            <textarea id="ed_sip_perks" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:8px;padding:8px;font-size:0.82rem;font-weight:600;height:80px;resize:none;">${_sip.perks||'🧋 Buy 8 drinks → 1 FREE\n🍟 Birthday free Peri Peri Fries\n🎟️ 10% OFF welcome coupon'}</textarea>
+            <textarea id="ed_sip_perks" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:8px;padding:8px;font-size:0.82rem;font-weight:600;height:80px;resize:none;">🧋 Buy 8 drinks → 1 FREE
+🍟 Birthday free Peri Peri Fries
+🎟️ 10% OFF welcome coupon</textarea>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>Colour 1</label><input id="ed_sip_col1" type="color" value="${_sip.col1||'#3d1f00'}" style="height:42px;cursor:pointer;"/></div>
-            <div class="form-group"><label>Colour 2</label><input id="ed_sip_col2" type="color" value="${_sip.col2||'#5c3317'}" style="height:42px;cursor:pointer;"/></div>
+            <div class="form-group"><label>Colour 1</label><input id="ed_sip_col1" type="color" value="#3d1f00" style="height:42px;cursor:pointer;"/></div>
+            <div class="form-group"><label>Colour 2</label><input id="ed_sip_col2" type="color" value="#5c3317" style="height:42px;cursor:pointer;"/></div>
           </div>
           <button class="btn-sm" onclick="saveCardEditor('sip')" style="width:100%;background:#5c3317;">✅ Save Sip Starter</button>
         </div>
@@ -3042,14 +2874,17 @@ function showAdminSection(sec, el){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;max-width:900px;">
         <div class="admin-card" style="margin-bottom:0;">
           <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:#6b7280;margin-bottom:1rem;">✨ Pearl Society Settings</div>
-          <div class="form-group"><label>Card Title</label><input id="ed_pearl_title" type="text" value="${_pearl.title||'✨ Pearl Society'}"/></div>
-          <div class="form-group"><label>Level Label</label><input id="ed_pearl_level" type="text" value="${_pearl.level||'Regular Member'}"/></div>
+          <div class="form-group"><label>Card Title</label><input id="ed_pearl_title" type="text" value="✨ Pearl Society"/></div>
+          <div class="form-group"><label>Level Label</label><input id="ed_pearl_level" type="text" value="Regular Member"/></div>
           <div class="form-group"><label>Perks (one per line)</label>
-            <textarea id="ed_pearl_perks" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:8px;padding:8px;font-size:0.82rem;font-weight:600;height:80px;resize:none;">${_pearl.perks||'🧋 Buy 8 drinks → 1 FREE\n🚀 Early access to new drinks\n🤫 Secret menu access\n💸 ₹50 OFF every 5 visits'}</textarea>
+            <textarea id="ed_pearl_perks" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:8px;padding:8px;font-size:0.82rem;font-weight:600;height:80px;resize:none;">🧋 Buy 8 drinks → 1 FREE
+🚀 Early access to new drinks
+🤫 Secret menu access
+💸 ₹50 OFF every 5 visits</textarea>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>Colour 1</label><input id="ed_pearl_col1" type="color" value="${_pearl.col1||'#374151'}" style="height:42px;cursor:pointer;"/></div>
-            <div class="form-group"><label>Colour 2</label><input id="ed_pearl_col2" type="color" value="${_pearl.col2||'#6b7280'}" style="height:42px;cursor:pointer;"/></div>
+            <div class="form-group"><label>Colour 1</label><input id="ed_pearl_col1" type="color" value="#374151" style="height:42px;cursor:pointer;"/></div>
+            <div class="form-group"><label>Colour 2</label><input id="ed_pearl_col2" type="color" value="#6b7280" style="height:42px;cursor:pointer;"/></div>
           </div>
           <button class="btn-sm" onclick="saveCardEditor('pearl')" style="width:100%;background:#6b7280;">✅ Save Pearl Society</button>
         </div>
@@ -3073,14 +2908,19 @@ function showAdminSection(sec, el){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;max-width:900px;">
         <div class="admin-card" style="margin-bottom:0;">
           <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:#d97706;margin-bottom:1rem;">👑 Golden Bubble Settings</div>
-          <div class="form-group"><label>Card Title</label><input id="ed_golden_title" type="text" value="${_golden.title||'👑 Golden Bubble'}"/></div>
-          <div class="form-group"><label>Level Label</label><input id="ed_golden_level" type="text" value="${_golden.level||'VIP Member'}"/></div>
+          <div class="form-group"><label>Card Title</label><input id="ed_golden_title" type="text" value="👑 Golden Bubble"/></div>
+          <div class="form-group"><label>Level Label</label><input id="ed_golden_level" type="text" value="VIP Member"/></div>
           <div class="form-group"><label>Perks (one per line)</label>
-            <textarea id="ed_golden_perks" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:8px;padding:8px;font-size:0.82rem;font-weight:600;height:100px;resize:none;">${_golden.perks||'🧋 Buy 8 → 1 FREE + Monthly free drink\n⚡ Priority ordering\n🎂 15% OFF birthdays\n👫 Bring friend → Free drink\n📸 Featured on Insta story\n🔑 First access to limited drinks'}</textarea>
+            <textarea id="ed_golden_perks" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:8px;padding:8px;font-size:0.82rem;font-weight:600;height:100px;resize:none;">🧋 Buy 8 → 1 FREE + Monthly free drink
+⚡ Priority ordering
+🎂 15% OFF birthdays
+👫 Bring friend → Free drink
+📸 Featured on Insta story
+🔑 First access to limited drinks</textarea>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>Colour 1</label><input id="ed_golden_col1" type="color" value="${_golden.col1||'#92400e'}" style="height:42px;cursor:pointer;"/></div>
-            <div class="form-group"><label>Colour 2</label><input id="ed_golden_col2" type="color" value="${_golden.col2||'#d97706'}" style="height:42px;cursor:pointer;"/></div>
+            <div class="form-group"><label>Colour 1</label><input id="ed_golden_col1" type="color" value="#92400e" style="height:42px;cursor:pointer;"/></div>
+            <div class="form-group"><label>Colour 2</label><input id="ed_golden_col2" type="color" value="#d97706" style="height:42px;cursor:pointer;"/></div>
           </div>
           <button class="btn-sm" onclick="saveCardEditor('golden')" style="width:100%;background:#d97706;">✅ Save Golden Bubble</button>
         </div>
@@ -3243,37 +3083,67 @@ function showAdminSection(sec, el){
     return;
   }
 
-  // Always sync latest Firestore data into localStorage before rendering settings
-  if(sec==='settings' && typeof db!=='undefined' && db){
-    db.collection('config').doc('cafe').get().then(doc=>{
-      if(doc.exists){
-        const d=doc.data();
-        const curr=loadFromLocal('bb_settings',{});
-        saveToLocal('bb_settings',{...curr,
-          cafeName: d.cafeName||curr.cafeName,
-          tagline:  d.tagline ||curr.tagline,
-          email:    d.email   ||curr.email,
-          phone:    d.phone   ||curr.phone,
-          address:  d.address ||curr.address,
-          openTime: d.openTime||curr.openTime,
-          closeTime:d.closeTime||curr.closeTime,
-        });
-        if(d.whatsapp) saveToLocal('bb_whatsapp', d.whatsapp);
-      }
-      // Re-render settings with fresh data
-      const _s2=loadFromLocal('bb_settings',{});
-      const _wa2=loadFromLocal('bb_whatsapp',null)||CAFE_WHATSAPP;
-      c.innerHTML = buildSettingsHTML(_s2, _wa2);
-    }).catch(()=>{
-      const _s2=loadFromLocal('bb_settings',{});
-      c.innerHTML = buildSettingsHTML(_s2, CAFE_WHATSAPP);
-    });
-    return;
-  }
   const _s = loadFromLocal('bb_settings', {});
-  if(sec==='settings') c.innerHTML = buildSettingsHTML(_s, CAFE_WHATSAPP);
-  if(sec==='settings') return;
-  // Settings rendered by buildSettingsHTML() above
+  if(sec==='settings') c.innerHTML = `
+    <h2 class="admin-section-title">⚙️ Settings</h2>
+
+    <!-- STORE INFO -->
+    <div class="admin-card" style="max-width:600px;margin-bottom:1.25rem;">
+      <h3 style="font-family:'Playfair Display',serif;color:#000;margin-bottom:1.25rem;font-weight:900;">🏪 Store Information</h3>
+      <div class="form-group"><label>Cafe Name</label><input id="settingCafe" type="text" value="${_s.cafeName||'thebubble.brew'}"/></div>
+      <div class="form-group"><label>Tagline</label><input id="settingTagline" type="text" value="${_s.tagline||'Sip. Chill. Repeat.'}"/></div>
+      <div class="form-group"><label>Email</label><input id="settingEmail" type="email" value="${_s.email||'hello@thebubble.brew'}"/></div>
+      <div class="form-group"><label>Phone</label><input id="settingPhone" type="tel" value="${_s.phone||'+91 98765 43210'}"/></div>
+      <div class="form-group"><label>Address</label><textarea id="settingAddr">${_s.address||'thebubble.brew, Main Street, City — 380001'}</textarea></div>
+      <div style="font-family:'Playfair Display',serif;font-size:0.9rem;font-weight:900;color:#000;margin-bottom:0.5rem;">🕐 Timings</div>
+      <div class="form-row">
+        <div class="form-group"><label>Mon–Fri Open</label><input id="settingOpen" type="time" value="${_s.openTime||'08:00'}"/></div>
+        <div class="form-group"><label>Mon–Fri Close</label><input id="settingClose" type="time" value="${_s.closeTime||'22:00'}"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Sat–Sun Open</label><input id="settingOpenWE" type="time" value="${_s.openTimeWE||'09:00'}"/></div>
+        <div class="form-group"><label>Sat–Sun Close</label><input id="settingCloseWE" type="time" value="${_s.closeTimeWE||'23:00'}"/></div>
+      </div>
+      <button class="btn-sm" onclick="saveSettings()">💾 Save Store Info</button>
+    </div>
+
+    <!-- WHATSAPP -->
+    <div class="admin-card" style="max-width:600px;margin-bottom:1.25rem;">
+      <h3 style="font-family:'Playfair Display',serif;color:#000;margin-bottom:1.25rem;font-weight:900;">💬 WhatsApp Number</h3>
+      <p style="font-size:0.82rem;color:var(--muted);font-weight:600;margin-bottom:1rem;">Table bookings and orders will be sent to this number. Include country code.</p>
+      <div class="form-group">
+        <label>WhatsApp Number</label>
+        <input id="settingWA" type="text" placeholder="919876543210" value="${CAFE_WHATSAPP}" style="font-size:1rem;letter-spacing:0.05em;"/>
+      </div>
+      <button class="btn-sm" onclick="saveWhatsApp()">💾 Save WhatsApp</button>
+    </div>
+
+    <!-- ADMIN CREDENTIALS -->
+    <div class="admin-card" style="max-width:600px;margin-bottom:1.25rem;border:2px solid rgba(220,38,38,0.2);background:#fffbfb;">
+      <h3 style="font-family:'Playfair Display',serif;color:#b91c1c;margin-bottom:0.5rem;font-weight:900;">🔐 Admin Credentials</h3>
+      <p style="font-size:0.82rem;color:#888;font-weight:600;margin-bottom:1.25rem;">Change username and password — only you should know this. Remember it!</p>
+      <div class="form-group">
+        <label>New Username</label>
+        <input id="newUsername" type="text" placeholder="New username" autocomplete="off"/>
+      </div>
+      <div class="form-group" style="position:relative;">
+        <label>Current Password (to verify)</label>
+        <input id="currentPass" type="password" placeholder="Current password" autocomplete="off"/>
+        <span onclick="togglePassVis('currentPass',this)" style="position:absolute;right:12px;top:38px;cursor:pointer;">👁</span>
+      </div>
+      <div class="form-group" style="position:relative;">
+        <label>New Password</label>
+        <input id="newPass" type="password" placeholder="Min 6 characters" autocomplete="off"/>
+        <span onclick="togglePassVis('newPass',this)" style="position:absolute;right:12px;top:38px;cursor:pointer;">👁</span>
+      </div>
+      <div class="form-group" style="position:relative;">
+        <label>Confirm New Password</label>
+        <input id="confirmPass" type="password" placeholder="Re-enter new password" autocomplete="off"/>
+        <span onclick="togglePassVis('confirmPass',this)" style="position:absolute;right:12px;top:38px;cursor:pointer;">👁</span>
+      </div>
+      <div id="credError" style="display:none;background:#fee2e2;border:1.5px solid #ef4444;border-radius:8px;padding:10px 14px;font-size:0.82rem;font-weight:700;color:#b91c1c;margin-bottom:1rem;"></div>
+      <button class="btn-sm" style="background:#b91c1c;" onclick="changeCredentials()">🔐 Update Credentials</button>
+    </div>`;
 }
 
 function showAdminCustDetail(i){
@@ -3883,15 +3753,18 @@ function saveSettings(){
     const [h,m]=t.split(':').map(Number);
     return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
   }
-  // Weekday timing (Mon–Sat)
+  // Weekday timing
   if(openT||closeT){
     const str=`${fmtTime(openT||'08:00')} – ${fmtTime(closeT||'22:00')}`;
     const el=document.getElementById('contactTimingWeekday');
     if(el) el.textContent=str;
   }
-  // Sunday always Closed
-  const weEl=document.getElementById('contactTimingWeekend');
-  if(weEl) weEl.textContent='Closed';
+  // Weekend timing
+  if(openWE||closeWE){
+    const str=`${fmtTime(openWE||'09:00')} – ${fmtTime(closeWE||'23:00')}`;
+    const el=document.getElementById('contactTimingWeekend');
+    if(el) el.textContent=str;
+  }
 
   const curr=loadFromLocal('bb_settings',{});
   saveToLocal('bb_settings',{
@@ -4187,11 +4060,25 @@ function rebuildMenuUI(){
 // ────── BANNERS SYSTEM ──────
 let bannersData = [];
 
+function renderHomepageBanners(){
+  const bar     = document.getElementById('bannerBar');
+  const barText = document.getElementById('bannerBarText');
+  if(!bar || !barText) return;
+  const active = bannersData.filter(b=>b.on);
+  if(active.length === 0){
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'block';
+  const text = active.map(b=>`${b.icon||'📢'} ${b.name}`).join('   ·   ');
+  barText.innerHTML = `<span class="banner-scroll">${text}&nbsp;&nbsp;&nbsp;&nbsp;${text}</span>`;
+}
+
 function renderBannersHTML(){
   if(!bannersData.length) return '<div style="text-align:center;color:var(--muted);padding:2rem;font-weight:700;">No banners yet. Add one above.</div>';
   return bannersData.map((b,i)=>`
-    <div class="banner-row" id="bannerRow_${i}" style="flex-wrap:wrap;gap:0.75rem;">
-      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:200px;">
+    <div class="banner-row" id="bannerRow_${i}">
+      <div style="display:flex;align-items:center;gap:12px;">
         <div class="banner-icon-area" style="font-size:1.75rem;">
           ${b.imageUrl ? `<img src="${b.imageUrl}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;"/>` : b.icon}
         </div>
@@ -4200,17 +4087,9 @@ function renderBannersHTML(){
           <span style="font-size:0.8rem;color:#666;">${b.note}</span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:0.72rem;font-weight:700;color:var(--muted);">🎨 BG:</span>
-          <input type="color" value="${b.color||'#5c3317'}" onchange="updateBannerColor(${i},'color',this.value)" style="width:32px;height:28px;border:none;cursor:pointer;border-radius:4px;" title="Banner background color"/>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:0.72rem;font-weight:700;color:var(--muted);">🔤 Text:</span>
-          <input type="color" value="${b.textColor||'#f5ede0'}" onchange="updateBannerColor(${i},'textColor',this.value)" style="width:32px;height:28px;border:none;cursor:pointer;border-radius:4px;" title="Banner text color"/>
-        </div>
+      <div style="display:flex;align-items:center;gap:12px;">
         <div class="toggle ${b.on?'on':''}" onclick="toggleBanner(${i},this)"></div>
-        <button class="btn-sm" onclick="triggerBannerUpload(${i})">📷</button>
+        <button class="btn-sm" onclick="triggerBannerUpload(${i})">Upload Image</button>
         <input type="file" id="bannerImg_${i}" accept="image/*" style="display:none" onchange="applyBannerImage(this,${i})"/>
         <button class="btn-danger" onclick="deleteBanner(${i})" style="font-size:0.75rem;padding:5px 10px;">🗑</button>
       </div>
@@ -4226,8 +4105,8 @@ function toggleBanner(i, el){
   bannersData[i].on = !bannersData[i].on;
   el.classList.toggle('on');
   saveToLocal('bb_banners', bannersData);
-  renderBannerStrip();
   showToast(`${bannersData[i].on?'✅ Banner on':'⛔ Banner off'} — ${bannersData[i].name}`);
+  renderHomepageBanners();
 }
 
 function deleteBanner(i){
@@ -4235,7 +4114,6 @@ function deleteBanner(i){
   bannersData.splice(i,1);
   refreshBannersList();
   saveToLocal('bb_banners', bannersData);
-  renderBannerStrip();
   showToast(`🗑 "${name}" deleted!`);
 }
 
@@ -4248,63 +4126,15 @@ function addNewBanner(){
   const icon = document.getElementById('nb_icon')?.value?.trim() || '📢';
   const name = document.getElementById('nb_name')?.value?.trim();
   const note = document.getElementById('nb_note')?.value?.trim() || 'Custom banner';
-  const color = document.getElementById('nb_color')?.value || '#5c3317';
-  const textColor = document.getElementById('nb_textcolor')?.value || '#f5ede0';
   if(!name){ showToast('⚠️ Please enter a banner name!'); return; }
-  bannersData.push({ icon, name, note, on:false, color, textColor });
+  bannersData.push({ icon, name, note, on:false });
   refreshBannersList();
   saveToLocal('bb_banners', bannersData);
-  renderBannerStrip();
   document.getElementById('addBannerForm').style.display='none';
   document.getElementById('nb_icon').value='';
   document.getElementById('nb_name').value='';
   document.getElementById('nb_note').value='';
-  document.getElementById('nb_color').value='#5c3317';
-  document.getElementById('nb_color_text').value='#5c3317';
-  document.getElementById('nb_textcolor').value='#f5ede0';
-  document.getElementById('nb_textcolor_text').value='#f5ede0';
   showToast(`✨ "${name}" banner added!`);
-}
-
-function updateBannerColor(i, prop, value){
-  bannersData[i][prop] = value;
-  saveToLocal('bb_banners', bannersData);
-  renderBannerStrip();
-  showToast(`🎨 Banner color updated!`);
-}
-
-
-// ────── RENDER HOMEPAGE BANNER STRIP ──────
-function renderBannerStrip(){
-  const strip = document.getElementById('homeBannerStrip');
-  const track = document.getElementById('bannerStripTrack');
-  if(!strip || !track) return;
-  const active = bannersData.filter(b => b.on);
-  if(!active.length){ strip.style.display='none'; return; }
-  strip.style.display='block';
-
-  // If all banners share the same color, set strip background
-  // Otherwise, each banner item gets its own color
-  const firstColor = active[0].color || '#5c3317';
-  const allSameColor = active.every(b=>(b.color||'#5c3317')===firstColor);
-  if(allSameColor){
-    strip.style.background = firstColor;
-  } else {
-    strip.style.background = '#5c3317'; // fallback
-  }
-
-  // Build items — each item uses its own colors
-  const items = active.map(b => {
-    const bg = b.color || '#5c3317';
-    const tc = b.textColor || '#f5ede0';
-    return `<div class="banner-item" style="background:${bg};color:${tc};border-right-color:${tc}20;">
-      <span class="b-icon">${b.icon||'📢'}</span>
-      <span style="color:${tc};">${b.name}</span>
-      ${b.note ? `<span class="b-sep" style="color:${tc}80;">•</span><span style="opacity:0.85;font-size:0.78rem;color:${tc};">${b.note}</span>` : ''}
-    </div>`;
-  }).join('');
-  // Duplicate for infinite scroll
-  track.innerHTML = items + items;
 }
 
 // ────── SPECIAL OFFERS SYSTEM ──────
@@ -4724,45 +4554,7 @@ function closeModal(e){
 
 // ────── LOCAL LOYALTY / PAYMENT (without Firebase) ──────
 window.signInWithGoogle = function(){
-  showToast('⚠️ Google login works on deployed site. Local file માં Guest login વાપરો.');
-  // Show name input fallback for local mode
-  const step1 = document.getElementById('otpStep1');
-  if(step1){
-    const fallback = document.getElementById('localLoginFallback');
-    if(!fallback){
-      const div = document.createElement('div');
-      div.id = 'localLoginFallback';
-      div.style.cssText = 'margin-top:1rem;text-align:left;';
-      div.innerHTML = `
-        <div style="font-size:0.75rem;font-weight:700;color:var(--muted);margin-bottom:0.5rem;text-align:center;">— Local Mode Login —</div>
-        <input id="localLoginName" type="text" placeholder="Enter your name" style="width:100%;padding:12px;border:2px solid rgba(92,51,23,0.2);border-radius:8px;font-size:0.95rem;font-weight:700;margin-bottom:0.5rem;box-sizing:border-box;"/>
-        <input id="localLoginEmail" type="email" placeholder="Enter your email (optional)" style="width:100%;padding:12px;border:2px solid rgba(92,51,23,0.2);border-radius:8px;font-size:0.95rem;font-weight:700;margin-bottom:0.75rem;box-sizing:border-box;"/>
-        <button onclick="localQuickLogin()" style="width:100%;background:var(--brown);color:#fff;border:none;padding:13px;border-radius:8px;font-size:0.9rem;font-weight:900;cursor:pointer;">☕ Continue as Guest →</button>
-      `;
-      step1.appendChild(div);
-    } else {
-      fallback.style.display = fallback.style.display==='none' ? 'block' : 'block';
-    }
-  }
-}
-
-function localQuickLogin(){
-  const name = document.getElementById('localLoginName')?.value?.trim();
-  const email = document.getElementById('localLoginEmail')?.value?.trim();
-  if(!name){ showToast('⚠️ Please enter your name!'); return; }
-  currentUser = { name, email: email||'', phone: '', uid: 'local_'+Date.now() };
-  // Save to localStorage
-  try{ localStorage.setItem('bb_profile', JSON.stringify({ name, email: email||'', phone:'', uid: currentUser.uid })); }catch(e){}
-  // Update UI
-  const loginBtn = document.getElementById('loginNavBtn');
-  const dashBtn  = document.getElementById('dashNavBtn');
-  if(loginBtn) loginBtn.style.display='none';
-  if(dashBtn){ dashBtn.style.display='inline-block'; dashBtn.textContent = name.split(' ')[0]; }
-  ['loyaltyCardName','pearlCardName','goldenCardName'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=name;});
-  const custName=document.getElementById('custName'); if(custName) custName.textContent=name;
-  goToStep(3);
-  const welcomeMsg=document.getElementById('otpWelcomeMsg'); if(welcomeMsg) welcomeMsg.textContent=`Welcome, ${name.split(' ')[0]}! ☕`;
-  showToast(`✅ Welcome, ${name.split(' ')[0]}! 🎉`);
+  showToast('⚠️ Google login only works on Netlify. Please use phone login.');
 }
 
 function deleteOrder(i){
@@ -4963,12 +4755,6 @@ function saveCardEditor(tier){
     perksEl.innerHTML = perks.split('\n').filter(Boolean).join('<br/>');
   }
 
-
-  // Save to localStorage (so editor shows saved values on reopen)
-  const allCards = loadFromLocal('bb_cards', {});
-  allCards[tier] = { title, level, perks, col1, col2 };
-  saveToLocal('bb_cards', allCards);
-
   // Save to Firestore
   if(typeof db!=='undefined'&&db){
     db.collection('config').doc(`card_${tier}`).set({
@@ -5106,8 +4892,10 @@ function loadLoyaltyStamps(){
   if(typeof db!=='undefined'&&db){
     db.collection('loyalty_stamps').onSnapshot(snap=>{
       snap.docs.forEach(doc=>{ loyaltyStampStore[doc.id]=doc.data(); });
-      // Fix: stamps are stored as uid_sip, uid_pearl, uid_golden — update all tier cards
-      if(currentUser) updateAllTierCards();
+      if(currentUser){
+        const key=currentUser.uid||currentUser.email||currentUser.phone;
+        if(key&&loyaltyStampStore[key]) updateCustomerLoyaltyCard(key);
+      }
     });
   }
 }
@@ -5174,11 +4962,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     <p style="font-size:0.82rem;color:var(--muted);font-weight:700;margin-bottom:1.25rem;">Leave a quick review — it means a lot! ☕</p>
     <!-- Star Rating -->
     <div style="display:flex;justify-content:center;gap:8px;margin-bottom:1rem;" id="starRating">
-      <span onclick="setReviewStar(1)" id="star_1" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
-      <span onclick="setReviewStar(2)" id="star_2" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
-      <span onclick="setReviewStar(3)" id="star_3" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
-      <span onclick="setReviewStar(4)" id="star_4" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
-      <span onclick="setReviewStar(5)" id="star_5" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
+      ${[1,2,3,4,5].map(n=>`<span onclick="setReviewStar(${n})" id="star_${n}" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>`).join('')}
     </div>
     <textarea id="reviewText" placeholder="Tell us about your experience…" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:10px;padding:10px;font-size:0.85rem;font-weight:600;font-family:'DM Sans',sans-serif;resize:none;height:80px;margin-bottom:1rem;"></textarea>
     <input id="reviewName" type="text" placeholder="Your name (optional)" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:8px;padding:8px 12px;font-size:0.82rem;font-weight:600;margin-bottom:1rem;font-family:'DM Sans',sans-serif;"/>
@@ -5188,33 +4972,6 @@ window.addEventListener('DOMContentLoaded', ()=>{
 </div>
 
 <button class="voice-btn" id="voiceBtn" onclick="toggleAmbient()" title="Cafe Ambiance Sound">🎵</button>
-
-<!-- ── GLOBAL HELPER FUNCTIONS (available with or without Firebase) ── -->
-<script>
-// Always-available order history refresh — works for phone/uid/email matched users
-function refreshCustomerOrders(){
-  if(!currentUser) return;
-  const listEl=document.getElementById('custOrdersList');
-  if(!listEl) return;
-  const myOrders=ordersData.filter(o=>
-    (currentUser.phone && o.phone && o.phone===currentUser.phone) ||
-    (currentUser.uid   && o.uid   && o.uid===currentUser.uid)     ||
-    (currentUser.email && o.email && o.email===currentUser.email)
-  );
-  listEl.innerHTML = myOrders.length===0
-    ?'<div style="text-align:center;padding:2rem;color:#aaa;font-weight:700;">No orders yet. 🛒</div>'
-    :myOrders.map(o=>{
-      const d=o.createdAt?.toDate?o.createdAt.toDate():new Date();
-      return `<div class="order-hist-item">
-        <div class="order-hist-date"><div class="order-hist-day">${d.getDate()}</div><div class="order-hist-mon">${d.toLocaleString('en',{month:'short'})}</div></div>
-        <div class="order-hist-items"><div class="order-hist-name">${o.items}</div><div class="order-hist-sub">${o.id}</div></div>
-        <div class="order-hist-right"><div class="order-hist-total">${o.total}</div>
-        <span class="order-hist-badge ${o.status==='Delivered'?'ohb-green':o.status==='Preparing'?'ohb-amber':'ohb-red'}">${o.status}</span></div>
-      </div>`;
-    }).join('');
-}
-</script>
-
 <!-- ── FIREBASE REAL-TIME INTEGRATION ── -->
 <script>
 // Only run if Firebase connected (Netlify) — skipped on local
@@ -5228,36 +4985,15 @@ async function signInWithGoogle(){
   try{
     showToast('⏳ Google login...');
     const result = await auth.signInWithPopup(googleProvider);
-    if(result && result.user){
-      await handleGoogleLogin(result.user);
-      closeOTPModal();
-    }
+    await handleGoogleLogin(result.user);
   } catch(e){
-    if(e.code === 'auth/popup-blocked'){
-      showToast('⚠️ Popup blocked! Firebase Console માં તમારો domain add કરો.');
-    } else if(e.code === 'auth/unauthorized-domain'){
-      showToast('⚠️ Domain authorized નથી — Firebase Console → Authentication → Authorized domains માં Vercel URL add કરો.');
-    } else {
-      showToast('❌ Login failed: ' + (e.message||e.code||'Unknown error'));
-    }
-    console.error(e);
+    if(e.code !== 'auth/popup-closed-by-user') showToast('❌ Login failed. Try again.');
   }
 }
 window.signInWithGoogle = signInWithGoogle;
 
-// Handle redirect result on page load (fallback)
-auth.getRedirectResult().then(async result=>{
-  if(result && result.user){
-    await handleGoogleLogin(result.user);
-    closeOTPModal();
-  }
-}).catch(e=>{
-  if(e.code && e.code !== 'auth/no-current-user')
-    console.warn('Redirect result error:', e.code);
-});
-
 async function handleGoogleLogin(user){
-  currentUser = {name:user.displayName||'Customer', email:user.email, phone:user.phoneNumber||'', photo:user.photoURL, uid:user.uid};
+  currentUser = {name:user.displayName||'Customer', email:user.email, phone:user.phoneNumber||user.uid, photo:user.photoURL, uid:user.uid};
   if(db){
     const snap = await db.collection('customers').where('uid','==',user.uid).get();
     if(snap.empty){
@@ -5285,15 +5021,12 @@ async function handleGoogleLogin(user){
   if(profEmailEl) profEmailEl.value = currentUser.email || '';
   if(profPhoneEl) profPhoneEl.value = currentUser.phone || '';
   if(custNameEl)  custNameEl.textContent = currentUser.name || 'Welcome!';
-  if(custPhoneEl) custPhoneEl.textContent = currentUser.email || '';
+  if(custPhoneEl) custPhoneEl.textContent = currentUser.email || currentUser.phone || '';
   goToStep(3);
   const welcomeMsg = document.getElementById('otpWelcomeMsg');
   if(welcomeMsg) welcomeMsg.textContent = `Welcome, ${currentUser.name.split(' ')[0]}! ☕`;
   saveCustomerSession(currentUser.email || currentUser.uid);
   showToast(`✅ Welcome, ${currentUser.name.split(' ')[0]}!`);
-  // Refresh order history and loyalty cards for this user
-  refreshCustomerOrders();
-  updateAllTierCards();
 }
 
 auth.onAuthStateChanged(async user=>{
@@ -5320,7 +5053,23 @@ db.collection('menu').orderBy('name').onSnapshot(snap=>{
 // ORDERS
 db.collection('orders').orderBy('createdAt','desc').onSnapshot(snap=>{
   ordersData = snap.docs.map(d=>({...d.data(),firestoreId:d.id}));
-  refreshCustomerOrders();
+  if(currentUser?.phone){
+    const myOrders=ordersData.filter(o=>o.phone===currentUser.phone);
+    const listEl=document.getElementById('custOrdersList');
+    if(listEl){
+      listEl.innerHTML = myOrders.length===0
+        ?'<div style="text-align:center;padding:2rem;color:#aaa;font-weight:700;">No orders yet. 🛒</div>'
+        :myOrders.map(o=>{
+          const d=o.createdAt?.toDate?o.createdAt.toDate():new Date();
+          return `<div class="order-hist-item">
+            <div class="order-hist-date"><div class="order-hist-day">${d.getDate()}</div><div class="order-hist-mon">${d.toLocaleString('en',{month:'short'})}</div></div>
+            <div class="order-hist-items"><div class="order-hist-name">${o.items}</div><div class="order-hist-sub">${o.id}</div></div>
+            <div class="order-hist-right"><div class="order-hist-total">${o.total}</div>
+            <span class="order-hist-badge ${o.status==='Delivered'?'ohb-green':o.status==='Preparing'?'ohb-amber':'ohb-red'}">${o.status}</span></div>
+          </div>`;
+        }).join('');
+    }
+  }
 });
 
 // CUSTOMERS
@@ -5355,9 +5104,9 @@ db.collection('payment_requests').onSnapshot(snap=>{
 // BANNERS
 db.collection('banners').orderBy('order').onSnapshot(snap=>{
   bannersData=snap.docs.map(d=>({...d.data(),firestoreId:d.id}));
-  renderBannerStrip();
   const wrap=document.getElementById('bannersListWrap');
   if(wrap) wrap.innerHTML=renderBannersHTML();
+  renderHomepageBanners();
 });
 
 // CONFIG
@@ -5367,20 +5116,6 @@ db.collection('config').doc('cafe').onSnapshot(doc=>{
     if(d.whatsapp) CAFE_WHATSAPP=d.whatsapp;
     if(d.adminUser) adminCredentials.username=d.adminUser;
     if(d.adminPass) adminCredentials.password=d.adminPass;
-
-    // ── Sync to localStorage so admin Settings panel shows correct values ──
-    const _curr=loadFromLocal('bb_settings',{});
-    saveToLocal('bb_settings',{..._curr,
-      cafeName: d.cafeName||_curr.cafeName,
-      tagline:  d.tagline ||_curr.tagline,
-      email:    d.email   ||_curr.email,
-      phone:    d.phone   ||_curr.phone,
-      address:  d.address ||_curr.address,
-      openTime: d.openTime||_curr.openTime,
-      closeTime:d.closeTime||_curr.closeTime,
-    });
-    if(d.whatsapp) saveToLocal('bb_whatsapp', d.whatsapp);
-    if(d.adminUser||d.adminPass) saveToLocal('bb_admin_creds', adminCredentials);
 
     // ── Restore "Get in Touch" section from Firebase ──
     if(d.cafeName)
@@ -5396,8 +5131,11 @@ db.collection('config').doc('cafe').onSnapshot(doc=>{
       const wdEl=document.getElementById('contactTimingWeekday');
       if(wdEl) wdEl.textContent=`${fmtFB(d.openTime||'08:00')} – ${fmtFB(d.closeTime||'22:00')}`;
     }
-    const weEl2=document.getElementById('contactTimingWeekend');
-    if(weEl2) weEl2.textContent='Closed';
+    if(d.openTimeWE||d.closeTimeWE){
+      function fmtFBW(t){if(!t)return '';const[h,m]=t.split(':').map(Number);return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;}
+      const weEl=document.getElementById('contactTimingWeekend');
+      if(weEl) weEl.textContent=`${fmtFBW(d.openTimeWE||'09:00')} – ${fmtFBW(d.closeTimeWE||'23:00')}`;
+    }
     if(d.mapUrl) applyGoogleMap(d.mapUrl);
   }
 });
@@ -5574,30 +5312,17 @@ addNewBanner=async function(){
   const icon=document.getElementById('nb_icon')?.value?.trim()||'📢';
   const name=document.getElementById('nb_name')?.value?.trim();
   const note=document.getElementById('nb_note')?.value?.trim()||'Custom banner';
-  const color=document.getElementById('nb_color')?.value||'#5c3317';
-  const textColor=document.getElementById('nb_textcolor')?.value||'#f5ede0';
   if(!name){showToast('⚠️ Please enter a banner name!');return;}
-  await db.collection('banners').add({icon,name,note,on:false,color,textColor,order:bannersData.length,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  await db.collection('banners').add({icon,name,note,on:false,order:bannersData.length,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
   document.getElementById('addBannerForm').style.display='none';
   ['nb_icon','nb_name','nb_note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  if(document.getElementById('nb_color')) document.getElementById('nb_color').value='#5c3317';
-  if(document.getElementById('nb_textcolor')) document.getElementById('nb_textcolor').value='#f5ede0';
   showToast(`✨ "${name}" banner added!`);
 };
 
 toggleBanner=async function(i,el){
   const b=bannersData[i]; const newOn=!b.on; el.classList.toggle('on');
-  bannersData[i].on = newOn;
   if(b?.firestoreId) await db.collection('banners').doc(b.firestoreId).update({on:newOn});
-  renderBannerStrip();
   showToast(`${newOn?'✅ On':'⛔ Off'} — ${b.name}`);
-};
-
-updateBannerColor=async function(i, prop, value){
-  bannersData[i][prop] = value;
-  if(bannersData[i]?.firestoreId) await db.collection('banners').doc(bannersData[i].firestoreId).update({[prop]:value});
-  renderBannerStrip();
-  showToast(`🎨 Banner color updated!`);
 };
 
 deleteBanner=async function(i){
@@ -5695,29 +5420,17 @@ confirmPayment=async function(){
   const cartSnapshot=[...cart];
   const totalAmt=cartSnapshot.reduce((s,c)=>s+c.price*c.qty,0);
   const orderId='#'+Math.floor(1000+Math.random()*9000);
-  const orderDoc={id:orderId,customer:currentUser?.name||'Guest',phone:currentUser?.phone||'',uid:currentUser?.uid||'',email:currentUser?.email||'',items:cartSnapshot.map(c=>`${c.name} ×${c.qty}`).join(', '),total:`₹${totalAmt}`,status:'Preparing',note,time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+  const orderDoc={id:orderId,customer:currentUser?.name||'Guest',phone:currentUser?.phone||'',items:cartSnapshot.map(c=>`${c.name} ×${c.qty}`).join(', '),total:`₹${totalAmt}`,status:'Preparing',note,time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),createdAt:firebase.firestore.FieldValue.serverTimestamp()};
   await db.collection('orders').add(orderDoc);
   await db.collection('payment_requests').add({id:orderId,customer:currentUser?.name||'Guest',items:orderDoc.items,amount:`₹${totalAmt}`,status:'Pending',time:orderDoc.time,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-  // Update customer record — check by uid (Google login) OR phone
-  const custQuery = currentUser?.uid
-    ? db.collection('customers').where('uid','==',currentUser.uid)
-    : currentUser?.phone
-      ? db.collection('customers').where('phone','==',currentUser.phone)
-      : null;
-  if(custQuery){
-    const snap=await custQuery.get();
-    if(snap.empty){
-      await db.collection('customers').add({name:currentUser.name||'Guest',phone:currentUser.phone||'',email:currentUser.email||'',uid:currentUser.uid||'',orders:1,total:`₹${totalAmt}`,status:'Active',fav:cartSnapshot[0]?.name||'',last:'Today',loyalty:'None',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    } else {
-      const doc=snap.docs[0];const prev=doc.data();
-      await db.collection('customers').doc(doc.id).update({orders:(prev.orders||0)+1,total:`₹${parseInt((prev.total||'₹0').replace(/[₹,]/g,''))+totalAmt}`,last:'Today'});
-    }
+  if(currentUser?.phone){
+    const snap=await db.collection('customers').where('phone','==',currentUser.phone).get();
+    if(snap.empty){await db.collection('customers').add({name:currentUser.name||'Guest',phone:currentUser.phone,email:'',orders:1,total:`₹${totalAmt}`,status:'Active',fav:cartSnapshot[0]?.name||'',last:'Today',loyalty:'None',createdAt:firebase.firestore.FieldValue.serverTimestamp()});}
+    else{const doc=snap.docs[0];const prev=doc.data();await db.collection('customers').doc(doc.id).update({orders:(prev.orders||0)+1,total:`₹${parseInt((prev.total||'₹0').replace(/[₹,]/g,''))+totalAmt}`,last:'Today'});}
   }
   closePayModal(); cart=[]; if(document.getElementById('orderNote')) document.getElementById('orderNote').value='';
   updateCartUI(); showToast('✅ Order placed! 🎉');
   setTimeout(()=>showToast('📋 '+orderId+' is being prepared...'),3000);
-  // Immediately refresh customer order history
-  refreshCustomerOrders();
   // Show review modal after 8 seconds
   setTimeout(()=>{ if(currentUser) openReviewModal(); }, 8000);
   const cartSummary=cartSnapshot.map(c=>`${c.emoji} ${c.name} ×${c.qty} — ₹${c.price*c.qty}`).join('\n');
@@ -5796,7 +5509,7 @@ db.collection('config').doc('cafe').get().then(doc=>{
     function fmtFC(t){ if(!t)return ''; const[h,m]=t.split(':').map(Number); return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`; }
     const timing=`${fmtFC(d.openTime||'08:00')} – ${fmtFC(d.closeTime||'22:00')}`;
     const wdEl=document.getElementById('contactTimingWeekday'); if(wdEl) wdEl.textContent=timing;
-    const weEl=document.getElementById('contactTimingWeekend'); if(weEl) weEl.textContent='Closed';
+    const weEl=document.getElementById('contactTimingWeekend'); if(weEl) weEl.textContent=timing;
   }
 }).catch(()=>{});
 
