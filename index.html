@@ -826,6 +826,11 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
   </section>
 
+  <!-- ── BANNERS SECTION (above Signature Dishes) ── -->
+  <div id="homeBannersSection" style="background:#fff;padding:0.5rem 2rem;">
+    <div id="homeBannersList" style="max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:0.5rem;"></div>
+  </div>
+
   <!-- Signature Dishes -->
   <section style="background:var(--cream);padding:5rem 2rem;" id="dishes">
     <div style="max-width:1200px;margin:0 auto;">
@@ -1406,30 +1411,38 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="pay-amount" id="payAmount">₹0</div>
     <div id="payModalNote" style="display:none;background:#fff7ed;border:1.5px solid var(--brown);border-radius:8px;padding:8px 12px;font-size:0.8rem;font-weight:700;color:var(--brown);margin-bottom:0.75rem;text-align:left;"></div>
 
-    <!-- UPI App Buttons -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:1rem;">
-      <button onclick="openUPI('gpay')" style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:800;font-size:0.82rem;justify-content:center;">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/512px-Google_Pay_Logo.svg.png" style="height:22px;"/> Google Pay
-      </button>
-      <button onclick="openUPI('phonepe')" style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:800;font-size:0.82rem;justify-content:center;">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/PhonePe_Logo.svg/512px-PhonePe_Logo.svg.png" style="height:22px;"/> PhonePe
-      </button>
-      <button onclick="openUPI('paytm')" style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:800;font-size:0.82rem;justify-content:center;">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Paytm_logo.png/320px-Paytm_logo.png" style="height:20px;"/> Paytm
-      </button>
-      <button onclick="openUPI('bhim')" style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-weight:800;font-size:0.82rem;justify-content:center;">
-        💙 BHIM / Any UPI
-      </button>
+    <!-- UPI ID Display -->
+    <div style="background:#f5f0eb;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:0.7rem;color:var(--muted);font-weight:700;">Pay to UPI ID</div>
+        <div style="font-weight:900;color:#000;font-size:0.95rem;" id="upiDisplayId">Q110933131@ybl</div>
+        <div style="font-size:0.72rem;color:var(--muted);font-weight:700;">thebubble.brew</div>
+      </div>
+      <div style="font-size:1.8rem;">💳</div>
     </div>
 
-    <div style="font-size:0.75rem;color:#888;font-weight:700;margin-bottom:1rem;text-align:center;">
-      Tap your UPI app → Pay → Come back & confirm below
+    <!-- Single Pay Button -->
+    <a id="upiPayLink" href="#" onclick="return openUPIPay()">
+      <button style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-weight:900;font-size:1rem;cursor:pointer;margin-bottom:0.75rem;display:flex;align-items:center;justify-content:center;gap:10px;">
+        <span style="font-size:1.3rem;">📱</span> Pay Now via UPI App
+      </button>
+    </a>
+
+    <!-- Manual pay option -->
+    <div id="upiManualFallback" style="display:none;background:#fff7ed;border:1.5px solid var(--brown);border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.75rem;text-align:left;">
+      <div style="font-size:0.78rem;font-weight:900;color:var(--brown);margin-bottom:6px;">📱 App nahi khuli? Manual pay karo:</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:8px;padding:8px 12px;">
+        <div>
+          <div style="font-size:0.7rem;color:#888;font-weight:700;">UPI ID</div>
+          <div style="font-weight:900;font-size:0.9rem;color:#000;">Q110933131@ybl</div>
+        </div>
+        <button onclick="copyUPIId()" style="background:var(--brown);color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:0.75rem;font-weight:800;cursor:pointer;">📋 Copy</button>
+      </div>
+      <div style="font-size:0.72rem;color:#666;font-weight:700;margin-top:6px;">Open GPay/PhonePe → Send Money → Paste UPI ID → Pay ₹<span id="manualAmount">0</span></div>
     </div>
 
-    <button class="btn-paid" onclick="confirmPayment()">✅ I Have Paid</button>
+    <button class="btn-paid" onclick="confirmPayment()">✅ I Have Paid — Confirm Order</button>
     <button onclick="closePayModal()" style="background:none;border:none;color:var(--muted);font-size:0.8rem;font-weight:700;cursor:pointer;margin-top:0.5rem;width:100%;">Cancel</button>
-
-    <div style="margin-top:0.75rem;"><button onclick="closePayModal()" style="background:none;border:none;color:#888;font-size:0.82rem;cursor:pointer;font-weight:700;">Cancel Order</button></div>
   </div>
 </div>
 
@@ -1703,33 +1716,45 @@ function proceedCheckout(){
 }
 
 // ────── PAYMENT ──────
-const UPI_NUMBER = '6352765825';
-const UPI_NAME   = 'thebubble.brew';
+const UPI_ID   = 'Q110933131@ybl';
+const UPI_NAME = 'thebubble.brew';
 
-function openUPI(app){
-  const amount = document.getElementById('payAmount')?.textContent?.replace('₹','').trim() || '0';
-  const upiStr = `upi://pay?pa=${UPI_NUMBER}@ybl&pn=${encodeURIComponent(UPI_NAME)}&am=${amount}&cu=INR`;
+function openUPIPay(){
+  const amountEl = document.getElementById('payAmount');
+  // Clean amount — remove ₹ comma spaces
+  const amount = (amountEl?.textContent||'0')
+    .replace(/[₹,\s]/g,'').trim();
 
-  const appLinks = {
-    gpay:    `gpay://upi/pay?pa=${UPI_NUMBER}@ybl&pn=${encodeURIComponent(UPI_NAME)}&am=${amount}&cu=INR`,
-    phonepe: `phonepe://pay?pa=${UPI_NUMBER}@ybl&pn=${encodeURIComponent(UPI_NAME)}&am=${amount}&cu=INR`,
-    paytm:   `paytmmp://pay?pa=${UPI_NUMBER}@paytm&pn=${encodeURIComponent(UPI_NAME)}&am=${amount}&cu=INR`,
-    bhim:    upiStr,
-  };
+  // Standard UPI deep link — simplest format, most compatible
+  const upiUrl = `upi://pay?pa=${UPI_ID}&pn=thebubble&am=${amount}&cu=INR`;
 
-  const link = appLinks[app] || upiStr;
-  window.location.href = link;
+  // Try opening UPI
+  window.location.href = upiUrl;
 
-  // Fallback to generic UPI after 1s if app doesn't open
+  // Show manual fallback after 3s if app didn't open
   setTimeout(()=>{
-    const fallback = document.createElement('a');
-    fallback.href = upiStr;
-    fallback.click();
-  }, 1200);
+    document.getElementById('upiManualFallback').style.display='block';
+  }, 3000);
+
+  return false;
+}
+
+function copyUPIId(){
+  navigator.clipboard?.writeText(UPI_ID).then(()=>{
+    showToast('✅ UPI ID copied! Paste in your payment app.');
+  }).catch(()=>{
+    showToast('UPI ID: ' + UPI_ID);
+  });
 }
 
 function openPayModal(total, note=''){
   document.getElementById('payAmount').textContent = `₹${total}`;
+  // Set manual fallback amount
+  const ma = document.getElementById('manualAmount');
+  if(ma) ma.textContent = total;
+  // Reset fallback visibility
+  const fb = document.getElementById('upiManualFallback');
+  if(fb) fb.style.display='none';
   // Show note in pay modal if exists
   const noteDisplay = document.getElementById('payModalNote');
   if(noteDisplay){
@@ -2537,6 +2562,9 @@ function showAdminSection(sec, el){
       <div class="form-group">
         <label>Description / Note</label>
         <input id="nb_note" type="text" placeholder="e.g. Valid weekends only"/>
+        <div class="form-row" style="margin-top:0.75rem;">
+          <div class="form-group"><label>Banner Colour</label><input id="nb_color" type="color" value="#5c3317" style="height:42px;cursor:pointer;width:100%;"/></div>
+        </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:0.5rem;">
         <button class="btn-sm" onclick="addNewBanner()">✅ Add Banner</button>
@@ -4072,6 +4100,28 @@ function renderHomepageBanners(){
   bar.style.display = 'block';
   const text = active.map(b=>`${b.icon||'📢'} ${b.name}`).join('   ·   ');
   barText.innerHTML = `<span class="banner-scroll">${text}&nbsp;&nbsp;&nbsp;&nbsp;${text}</span>`;
+  // Also render homepage banners section
+  renderHomeBanners();
+}
+
+function renderHomeBanners(){
+  const list = document.getElementById('homeBannersList');
+  const section = document.getElementById('homeBannersSection');
+  if(!list) return;
+  const active = bannersData.filter(b=>b.on);
+  if(active.length===0){
+    if(section) section.style.display='none';
+    return;
+  }
+  if(section) section.style.display='block';
+  list.innerHTML = active.map(b=>`
+    <div style="display:flex;align-items:center;gap:12px;background:${b.color||'var(--brown)'};color:#fff;border-radius:10px;padding:0.75rem 1.25rem;">
+      <div style="font-size:1.4rem;">${b.imageUrl?`<img src="${b.imageUrl}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;"/>`:b.icon||'📢'}</div>
+      <div>
+        <div style="font-weight:900;font-size:0.9rem;">${b.name}</div>
+        ${b.note?`<div style="font-size:0.78rem;opacity:0.85;font-weight:700;">${b.note}</div>`:''}
+      </div>
+    </div>`).join('');
 }
 
 function renderBannersHTML(){
@@ -4105,6 +4155,8 @@ function toggleBanner(i, el){
   bannersData[i].on = !bannersData[i].on;
   el.classList.toggle('on');
   saveToLocal('bb_banners', bannersData);
+  renderHomeBanners();
+  updateBannerBar();
   showToast(`${bannersData[i].on?'✅ Banner on':'⛔ Banner off'} — ${bannersData[i].name}`);
   renderHomepageBanners();
 }
@@ -4123,18 +4175,17 @@ function openAddBannerForm(){
 }
 
 function addNewBanner(){
-  const icon = document.getElementById('nb_icon')?.value?.trim() || '📢';
-  const name = document.getElementById('nb_name')?.value?.trim();
-  const note = document.getElementById('nb_note')?.value?.trim() || 'Custom banner';
+  const icon  = document.getElementById('nb_icon')?.value?.trim() || '📢';
+  const name  = document.getElementById('nb_name')?.value?.trim();
+  const note  = document.getElementById('nb_note')?.value?.trim() || '';
+  const color = document.getElementById('nb_color')?.value || '#5c3317';
   if(!name){ showToast('⚠️ Please enter a banner name!'); return; }
-  bannersData.push({ icon, name, note, on:false });
+  bannersData.push({ icon, name, note, color, on:false });
   refreshBannersList();
   saveToLocal('bb_banners', bannersData);
   document.getElementById('addBannerForm').style.display='none';
-  document.getElementById('nb_icon').value='';
-  document.getElementById('nb_name').value='';
-  document.getElementById('nb_note').value='';
-  showToast(`✨ "${name}" banner added!`);
+  ['nb_icon','nb_name','nb_note'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  showToast(`✨ "${name}" banner added! Toggle ON to show on homepage.`);
 }
 
 // ────── SPECIAL OFFERS SYSTEM ──────
@@ -5106,7 +5157,8 @@ db.collection('banners').orderBy('order').onSnapshot(snap=>{
   bannersData=snap.docs.map(d=>({...d.data(),firestoreId:d.id}));
   const wrap=document.getElementById('bannersListWrap');
   if(wrap) wrap.innerHTML=renderBannersHTML();
-  renderHomepageBanners();
+  renderHomeBanners();
+  updateBannerBar();
 });
 
 // CONFIG
