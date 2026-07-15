@@ -826,8 +826,13 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
   </section>
 
+  <!-- ── RUNNING BANNER BAR ── -->
+  <div id="bannerBar" style="background:var(--brown);color:#fff;padding:10px 0;overflow:hidden;white-space:nowrap;display:none;">
+    <div id="bannerBarText" style="display:inline-block;"></div>
+  </div>
+
   <!-- ── BANNERS SECTION (above Signature Dishes) ── -->
-  <div id="homeBannersSection" style="background:#fff;padding:0.5rem 2rem;">
+  <div id="homeBannersSection" style="background:#fff;padding:0.5rem 2rem;display:none;">
     <div id="homeBannersList" style="max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:0.5rem;"></div>
   </div>
 
@@ -1406,42 +1411,24 @@ tbody tr:last-child td{border-bottom:none;}
 <!-- ═══════════ PAYMENT MODAL ═══════════ -->
 <div class="pay-modal-overlay" id="payModal">
   <div class="pay-card">
-    <div style="font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--brown);font-weight:700;margin-bottom:0.25rem;">Complete Payment</div>
-    <h2>Pay via UPI</h2>
+    <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;margin-bottom:0.25rem;">Scan to Pay</h2>
     <div class="pay-amount" id="payAmount">₹0</div>
     <div id="payModalNote" style="display:none;background:#fff7ed;border:1.5px solid var(--brown);border-radius:8px;padding:8px 12px;font-size:0.8rem;font-weight:700;color:var(--brown);margin-bottom:0.75rem;text-align:left;"></div>
 
-    <!-- UPI ID Display -->
-    <div style="background:#f5f0eb;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <div style="font-size:0.7rem;color:var(--muted);font-weight:700;">Pay to UPI ID</div>
-        <div style="font-weight:900;color:#000;font-size:0.95rem;" id="upiDisplayId">Q110933131@ybl</div>
-        <div style="font-size:0.72rem;color:var(--muted);font-weight:700;">thebubble.brew</div>
+    <!-- QR Code Display -->
+    <div id="payQRBox" style="width:200px;height:200px;margin:0 auto 0.75rem;border-radius:12px;border:3px solid var(--brown);overflow:hidden;background:#f5f0eb;display:flex;align-items:center;justify-content:center;">
+      <img id="checkoutQRImg" src="" style="display:none;width:100%;height:100%;object-fit:contain;" alt="Payment QR"/>
+      <div id="payQRFallback" style="text-align:center;padding:1rem;">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">📱</div>
+        <div style="font-size:0.72rem;color:#888;font-weight:700;">QR not uploaded yet.<br/>Admin → Payment Verify → Upload QR</div>
       </div>
-      <div style="font-size:1.8rem;">💳</div>
     </div>
 
-    <!-- Single Pay Button -->
-    <a id="upiPayLink" href="#" onclick="return openUPIPay()">
-      <button style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-weight:900;font-size:1rem;cursor:pointer;margin-bottom:0.75rem;display:flex;align-items:center;justify-content:center;gap:10px;">
-        <span style="font-size:1.3rem;">📱</span> Pay Now via UPI App
-      </button>
-    </a>
-
-    <!-- Manual pay option -->
-    <div id="upiManualFallback" style="display:none;background:#fff7ed;border:1.5px solid var(--brown);border-radius:10px;padding:0.75rem 1rem;margin-bottom:0.75rem;text-align:left;">
-      <div style="font-size:0.78rem;font-weight:900;color:var(--brown);margin-bottom:6px;">📱 App nahi khuli? Manual pay karo:</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:8px;padding:8px 12px;">
-        <div>
-          <div style="font-size:0.7rem;color:#888;font-weight:700;">UPI ID</div>
-          <div style="font-weight:900;font-size:0.9rem;color:#000;">Q110933131@ybl</div>
-        </div>
-        <button onclick="copyUPIId()" style="background:var(--brown);color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:0.75rem;font-weight:800;cursor:pointer;">📋 Copy</button>
-      </div>
-      <div style="font-size:0.72rem;color:#666;font-weight:700;margin-top:6px;">Open GPay/PhonePe → Send Money → Paste UPI ID → Pay ₹<span id="manualAmount">0</span></div>
+    <div style="font-size:0.78rem;color:#666;font-weight:700;text-align:center;margin-bottom:1rem;">
+      Open any UPI app → Scan QR → Pay exact amount shown above
     </div>
 
-    <button class="btn-paid" onclick="confirmPayment()">✅ I Have Paid — Confirm Order</button>
+    <button class="btn-paid" onclick="confirmPayment()">✅ I Have Paid</button>
     <button onclick="closePayModal()" style="background:none;border:none;color:var(--muted);font-size:0.8rem;font-weight:700;cursor:pointer;margin-top:0.5rem;width:100%;">Cancel</button>
   </div>
 </div>
@@ -1716,54 +1703,14 @@ function proceedCheckout(){
 }
 
 // ────── PAYMENT ──────
-const UPI_ID   = 'Q110933131@ybl';
 const UPI_NAME = 'thebubble.brew';
-
-function openUPIPay(){
-  const amountEl = document.getElementById('payAmount');
-  // Clean amount — remove ₹ comma spaces
-  const amount = (amountEl?.textContent||'0')
-    .replace(/[₹,\s]/g,'').trim();
-
-  // Standard UPI deep link — simplest format, most compatible
-  const upiUrl = `upi://pay?pa=${UPI_ID}&pn=thebubble&am=${amount}&cu=INR`;
-
-  // Try opening UPI
-  window.location.href = upiUrl;
-
-  // Show manual fallback after 3s if app didn't open
-  setTimeout(()=>{
-    document.getElementById('upiManualFallback').style.display='block';
-  }, 3000);
-
-  return false;
-}
-
-function copyUPIId(){
-  navigator.clipboard?.writeText(UPI_ID).then(()=>{
-    showToast('✅ UPI ID copied! Paste in your payment app.');
-  }).catch(()=>{
-    showToast('UPI ID: ' + UPI_ID);
-  });
-}
 
 function openPayModal(total, note=''){
   document.getElementById('payAmount').textContent = `₹${total}`;
-  // Set manual fallback amount
-  const ma = document.getElementById('manualAmount');
-  if(ma) ma.textContent = total;
-  // Reset fallback visibility
-  const fb = document.getElementById('upiManualFallback');
-  if(fb) fb.style.display='none';
-  // Show note in pay modal if exists
   const noteDisplay = document.getElementById('payModalNote');
   if(noteDisplay){
-    if(note){
-      noteDisplay.textContent = `📝 Note: ${note}`;
-      noteDisplay.style.display='block';
-    } else {
-      noteDisplay.style.display='none';
-    }
+    if(note){ noteDisplay.textContent=`📝 Note: ${note}`; noteDisplay.style.display='block'; }
+    else noteDisplay.style.display='none';
   }
   // Show payment QR if uploaded
   const qrImg = document.getElementById('checkoutQRImg');
