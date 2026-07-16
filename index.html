@@ -1704,22 +1704,28 @@ function proceedCheckout(){
 }
 
 // ────── PAYMENT ──────
-const UPI_ID   = '6352765825@ybl';
+const UPI_ID   = 'Q110933131@ybl';
 const UPI_NAME = 'thebubble.brew';
 
 function payViaUPI(app){
   const amount = (document.getElementById('payAmount')?.textContent||'0').replace(/[₹,\s]/g,'').trim();
   const name   = encodeURIComponent(UPI_NAME);
   const note   = encodeURIComponent('thebubble.brew order');
+  const txnRef = encodeURIComponent('BB'+Date.now());
 
-  const links = {
-    gpay:    `gpay://upi/pay?pa=${UPI_ID}&pn=${name}&am=${amount}&cu=INR&tn=${note}`,
-    phonepe: `phonepe://pay?pa=${UPI_ID}&pn=${name}&am=${amount}&cu=INR&tn=${note}`,
-    paytm:   `paytmmp://pay?pa=${UPI_ID}&pn=${name}&am=${amount}&cu=INR&tn=${note}`,
-    other:   `upi://pay?pa=${UPI_ID}&pn=${name}&am=${amount}&cu=INR&tn=${note}`,
-  };
+  // Generic UPI deep link — the phone's OS itself opens whichever UPI app
+  // the customer already has installed (GPay / PhonePe / Paytm / BHIM / etc.)
+  // instead of us trying to guess/target one specific app. This is the most
+  // reliable way to make sure "their own app opens directly" and payment goes through.
+  const upiLink = `upi://pay?pa=${UPI_ID}&pn=${name}&am=${amount}&cu=INR&tn=${note}&tr=${txnRef}`;
 
-  window.location.href = links[app] || links.other;
+  window.location.href = upiLink;
+
+  // Fallback: some iPhones / browsers silently swallow the upi:// scheme
+  // if no UPI app is installed to handle it — let the customer know.
+  setTimeout(()=>{
+    if(document.hasFocus()) showToast('⚠️ No UPI app found — install GPay/PhonePe/Paytm to pay');
+  }, 1500);
 }
 
 function openPayModal(total, note=''){
