@@ -528,8 +528,8 @@ tbody tr:last-child td{border-bottom:none;}
 
 /* Banner toggle */
 .banner-row{display:flex;align-items:center;justify-content:space-between;padding:1rem;background:#f5f0eb;border-radius:8px;margin-bottom:0.75rem;border:1px solid rgba(92,51,23,0.1);}
-@keyframes bannerScroll{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
-.banner-scroll{display:inline-block;animation:bannerScroll 18s linear infinite;}
+@keyframes bannerScroll{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
+.banner-scroll{display:inline-block;animation:bannerScroll 20s linear infinite;white-space:nowrap;}
 .toggle{width:44px;height:24px;background:#ccbba8;border-radius:12px;cursor:pointer;position:relative;transition:background 0.3s;}
 .toggle.on{background:var(--brown);}
 .toggle::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left 0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);}
@@ -798,10 +798,6 @@ tbody tr:last-child td{border-bottom:none;}
 <!-- ═══════════ HOME PAGE ═══════════ -->
 <div id="home" class="page active">
 
-  <!-- Banner Bar — shows active banners -->
-  <div id="bannerBar" style="display:none;background:var(--brown);color:#fff;padding:10px 1.5rem;text-align:center;font-size:0.82rem;font-weight:700;letter-spacing:0.05em;overflow:hidden;">
-    <div id="bannerBarText" style="white-space:nowrap;"></div>
-  </div>
 
   <!-- Hero -->
   <section class="hero">
@@ -1411,21 +1407,26 @@ tbody tr:last-child td{border-bottom:none;}
 <!-- ═══════════ PAYMENT MODAL ═══════════ -->
 <div class="pay-modal-overlay" id="payModal">
   <div class="pay-card">
-    <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;margin-bottom:0.25rem;">Scan to Pay</h2>
+    <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;margin-bottom:0.25rem;">Complete Payment</h2>
     <div class="pay-amount" id="payAmount">₹0</div>
     <div id="payModalNote" style="display:none;background:#fff7ed;border:1.5px solid var(--brown);border-radius:8px;padding:8px 12px;font-size:0.8rem;font-weight:700;color:var(--brown);margin-bottom:0.75rem;text-align:left;"></div>
 
-    <!-- QR Code Display -->
-    <div id="payQRBox" style="width:200px;height:200px;margin:0 auto 0.75rem;border-radius:12px;border:3px solid var(--brown);overflow:hidden;background:#f5f0eb;display:flex;align-items:center;justify-content:center;">
-      <img id="checkoutQRImg" src="" style="display:none;width:100%;height:100%;object-fit:contain;" alt="Payment QR"/>
-      <div id="payQRFallback" style="text-align:center;padding:1rem;">
-        <div style="font-size:2rem;margin-bottom:0.5rem;">📱</div>
-        <div style="font-size:0.72rem;color:#888;font-weight:700;">QR not uploaded yet.<br/>Admin → Payment Verify → Upload QR</div>
-      </div>
-    </div>
+    <p style="font-size:0.82rem;color:#666;font-weight:700;margin-bottom:1rem;text-align:center;">Choose your UPI app to pay</p>
 
-    <div style="font-size:0.78rem;color:#666;font-weight:700;text-align:center;margin-bottom:1rem;">
-      Open any UPI app → Scan QR → Pay exact amount shown above
+    <!-- UPI App Buttons -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+      <button onclick="payViaUPI('gpay')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#4285f4'" onmouseout="this.style.borderColor='#e5e7eb'">
+        <span style="font-size:1.8rem;">🟢</span> Google Pay
+      </button>
+      <button onclick="payViaUPI('phonepe')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#5f259f'" onmouseout="this.style.borderColor='#e5e7eb'">
+        <span style="font-size:1.8rem;">💜</span> PhonePe
+      </button>
+      <button onclick="payViaUPI('paytm')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#00baf2'" onmouseout="this.style.borderColor='#e5e7eb'">
+        <span style="font-size:1.8rem;">🔵</span> Paytm
+      </button>
+      <button onclick="payViaUPI('other')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#f47920'" onmouseout="this.style.borderColor='#e5e7eb'">
+        <span style="font-size:1.8rem;">📱</span> Other UPI
+      </button>
     </div>
 
     <button class="btn-paid" onclick="confirmPayment()">✅ I Have Paid</button>
@@ -1703,7 +1704,23 @@ function proceedCheckout(){
 }
 
 // ────── PAYMENT ──────
+const UPI_ID   = '6352765825@ybl';
 const UPI_NAME = 'thebubble.brew';
+
+function payViaUPI(app){
+  const amount = (document.getElementById('payAmount')?.textContent||'0').replace(/[₹,\s]/g,'').trim();
+  const name   = encodeURIComponent(UPI_NAME);
+  const note   = encodeURIComponent('thebubble.brew order');
+
+  const links = {
+    gpay:    `gpay://upi/pay?pa=${UPI_ID}&pn=${name}&am=${amount}&cu=INR&tn=${note}`,
+    phonepe: `phonepe://pay?pa=${UPI_ID}&pn=${name}&am=${amount}&cu=INR&tn=${note}`,
+    paytm:   `paytmmp://pay?pa=${UPI_ID}&pn=${name}&am=${amount}&cu=INR&tn=${note}`,
+    other:   `upi://pay?pa=${UPI_ID}&pn=${name}&am=${amount}&cu=INR&tn=${note}`,
+  };
+
+  window.location.href = links[app] || links.other;
+}
 
 function openPayModal(total, note=''){
   document.getElementById('payAmount').textContent = `₹${total}`;
@@ -1711,16 +1728,6 @@ function openPayModal(total, note=''){
   if(noteDisplay){
     if(note){ noteDisplay.textContent=`📝 Note: ${note}`; noteDisplay.style.display='block'; }
     else noteDisplay.style.display='none';
-  }
-  // Show payment QR if uploaded
-  const qrImg = document.getElementById('checkoutQRImg');
-  const qrFallback = document.getElementById('payQRFallback');
-  if(photoStore['paymentQR']){
-    if(qrImg){ qrImg.src=photoStore['paymentQR']; qrImg.style.display='block'; }
-    if(qrFallback) qrFallback.style.display='none';
-  } else {
-    if(qrImg) qrImg.style.display='none';
-    if(qrFallback) qrFallback.style.display='flex';
   }
   document.getElementById('payModal').classList.add('open');
 }
@@ -4034,6 +4041,8 @@ function rebuildMenuUI(){
 
 // ────── BANNERS SYSTEM ──────
 let bannersData = [];
+
+function updateBannerBar(){ renderHomepageBanners(); }
 
 function renderHomepageBanners(){
   const bar     = document.getElementById('bannerBar');
