@@ -746,7 +746,7 @@ tbody tr:last-child td{border-bottom:none;}
 </style>
   <!-- Firebase SDK — must load first -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body>
 
@@ -1770,36 +1770,48 @@ function payViaUPI(app){
 
 // ────── CAMERA QR AUTO-SCAN (scan the physical table QR, auto-open UPI app) ──────
 let payQRStream = null, payQRScanning = false;
+let payQRCtx = null;
 
 async function openPayCameraScan(){
+  if(!window.isSecureContext){
+    showToast('⚠️ Camera needs a secure (https://) website — open the live site, not a local file');
+    return;
+  }
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     showToast('⚠️ Camera not supported on this browser');
+    return;
+  }
+  if(typeof jsQR !== 'function'){
+    showToast('⚠️ Scanner failed to load — check your internet connection and retry');
     return;
   }
   const overlay = document.getElementById('payQRScanOverlay');
   const status  = document.getElementById('payQRStatus');
   overlay.style.display = 'flex';
-  status.textContent = 'Scanning…';
+  status.textContent = 'Starting camera…';
   const video = document.getElementById('payQRVideo');
+  const videoConstraints = { width:{ideal:1280}, height:{ideal:720} };
   try{
     try{
       // Try to force the BACK camera strictly first
-      payQRStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'}}});
+      payQRStream = await navigator.mediaDevices.getUserMedia({video:{...videoConstraints, facingMode:{exact:'environment'}}});
     }catch(e1){
       try{
         // Some devices don't support 'exact' — fall back to a strong preference for back camera
-        payQRStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+        payQRStream = await navigator.mediaDevices.getUserMedia({video:{...videoConstraints, facingMode:{ideal:'environment'}}});
       }catch(e2){
         // Last resort — any available camera
-        payQRStream = await navigator.mediaDevices.getUserMedia({video:true});
+        payQRStream = await navigator.mediaDevices.getUserMedia({video:videoConstraints});
       }
     }
     video.srcObject = payQRStream;
     await video.play();
+    status.textContent = 'Scanning… hold steady & keep QR inside the frame';
     payQRScanning = true;
+    payQRCtx = document.getElementById('payQRCanvas').getContext('2d', {willReadFrequently:true});
     requestAnimationFrame(scanPayQRFrame);
   }catch(e){
-    showToast('⚠️ Camera access denied — allow camera permission to scan');
+    showToast('⚠️ Camera error: ' + (e.name || 'permission denied') + ' — allow camera access and retry');
     closePayCameraScan();
   }
 }
@@ -1813,15 +1825,14 @@ function closePayCameraScan(){
 
 function scanPayQRFrame(){
   if(!payQRScanning) return;
-  const video  = document.getElementById('payQRVideo');
+  const video = document.getElementById('payQRVideo');
   const canvas = document.getElementById('payQRCanvas');
-  if(video.readyState === video.HAVE_ENOUGH_DATA && typeof jsQR === 'function'){
+  if(video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0){
     canvas.width  = video.videoWidth;
     canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    payQRCtx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = payQRCtx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {inversionAttempts:'attemptBoth'});
     if(code && code.data){
       handlePayQRResult(code.data);
       return;
@@ -1832,7 +1843,7 @@ function scanPayQRFrame(){
 
 function handlePayQRResult(data){
   const status = document.getElementById('payQRStatus');
-  if(status) status.textContent = '✅ QR detected! Opening payment app…';
+  if(status) status.textContent = 'QR detected! Opening payment app…';
   closePayCameraScan();
 
   // If the scanned QR itself is a UPI payment link, open it directly.
