@@ -96,6 +96,7 @@ header{
   max-width:900px;margin:0 auto -0.5rem;scrollbar-width:none;
 }
 .cat-banner-row::-webkit-scrollbar{display:none;}
+#recentDishesRow::-webkit-scrollbar{display:none;}
 .cat-banner-chip{
   flex-shrink:0;display:flex;align-items:center;gap:8px;
   padding:6px 14px 6px 6px;background:#fff;border-radius:30px;
@@ -745,6 +746,7 @@ tbody tr:last-child td{border-bottom:none;}
 </style>
   <!-- Firebase SDK — must load first -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
 </head>
 <body>
 
@@ -1099,6 +1101,22 @@ tbody tr:last-child td{border-bottom:none;}
     <p style="color:var(--muted);font-size:0.9rem;">Fresh, handcrafted, made with love daily</p>
   </div>
 
+  <!-- Search Bar -->
+  <div style="padding:0 2rem;max-width:1200px;margin:0 auto;">
+    <div style="position:relative;margin:0 auto 1.25rem;max-width:520px;">
+      <span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:1rem;pointer-events:none;">🔍</span>
+      <input type="text" id="menuSearchInput" placeholder="Search dishes… e.g. Mojito, Fries" oninput="searchMenu(this.value)"
+        style="width:100%;padding:12px 40px 12px 42px;border:2px solid rgba(92,51,23,0.15);border-radius:30px;font-size:0.88rem;font-weight:700;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;color:#333;background:#fff;"/>
+      <button onclick="clearMenuSearch()" id="menuSearchClear" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:1.05rem;cursor:pointer;color:#999;font-weight:900;">✕</button>
+    </div>
+  </div>
+
+  <!-- Recent Dishes (logged-in customers only) -->
+  <div id="recentDishesSection" style="display:none;max-width:1200px;margin:0 auto 1.5rem;padding:0 2rem;">
+    <div style="font-size:0.78rem;font-weight:900;color:var(--brown);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.6rem;">🕐 Your Recent Dishes</div>
+    <div id="recentDishesRow" style="display:flex;gap:0.75rem;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
+  </div>
+
   <div class="cat-banner-row" id="catBannerRow">
     <div class="cat-banner-chip active" onclick="filterMenu('all',null);setCatActive(this)">
       <div class="cat-emoji">🍽</div>All
@@ -1411,6 +1429,16 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="pay-amount" id="payAmount">₹0</div>
     <div id="payModalNote" style="display:none;background:#fff7ed;border:1.5px solid var(--brown);border-radius:8px;padding:8px 12px;font-size:0.8rem;font-weight:700;color:var(--brown);margin-bottom:0.75rem;text-align:left;"></div>
 
+    <button onclick="openPayCameraScan()" style="width:100%;background:var(--brown);color:#fff;border:none;padding:13px;border-radius:10px;font-weight:900;font-size:0.85rem;cursor:pointer;margin-bottom:0.9rem;display:flex;align-items:center;justify-content:center;gap:8px;">
+      📷 Scan Table QR to Pay
+    </button>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.9rem;">
+      <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+      <span style="font-size:0.7rem;color:#999;font-weight:800;">OR</span>
+      <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+    </div>
+
     <p style="font-size:0.82rem;color:#666;font-weight:700;margin-bottom:1rem;text-align:center;">Choose your UPI app to pay</p>
 
     <!-- UPI App Buttons -->
@@ -1432,6 +1460,18 @@ tbody tr:last-child td{border-bottom:none;}
     <button class="btn-paid" onclick="confirmPayment()">✅ I Have Paid</button>
     <button onclick="closePayModal()" style="background:none;border:none;color:var(--muted);font-size:0.8rem;font-weight:700;cursor:pointer;margin-top:0.5rem;width:100%;">Cancel</button>
   </div>
+</div>
+
+<!-- ═══════════ PAY-VIA-CAMERA QR SCAN OVERLAY ═══════════ -->
+<div id="payQRScanOverlay" style="display:none;position:fixed;inset:0;background:#000;z-index:99999;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;box-sizing:border-box;">
+  <button onclick="closePayCameraScan()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.15);color:#fff;border:none;width:38px;height:38px;border-radius:50%;font-size:1.15rem;cursor:pointer;">✕</button>
+  <div style="color:#fff;font-weight:800;font-size:0.9rem;margin-bottom:1rem;text-align:center;max-width:320px;">📷 Point camera at the table's payment QR code</div>
+  <div style="position:relative;width:min(90vw,340px);">
+    <video id="payQRVideo" playsinline muted style="width:100%;border-radius:16px;border:3px solid #fff;background:#111;display:block;"></video>
+    <div style="position:absolute;inset:8%;border:3px dashed rgba(255,255,255,0.6);border-radius:12px;pointer-events:none;"></div>
+  </div>
+  <canvas id="payQRCanvas" style="display:none;"></canvas>
+  <div id="payQRStatus" style="color:#d4a882;font-size:0.8rem;margin-top:1.25rem;font-weight:700;">Scanning…</div>
 </div>
 
 <!-- Cart FAB -->
@@ -1704,7 +1744,7 @@ function proceedCheckout(){
 }
 
 // ────── PAYMENT ──────
-const UPI_ID   = 'Q110933131@ybl';
+const UPI_ID   = 'thebubblebrew@ibl';
 const UPI_NAME = 'thebubble.brew';
 
 function payViaUPI(app){
@@ -1728,6 +1768,77 @@ function payViaUPI(app){
   }, 1500);
 }
 
+// ────── CAMERA QR AUTO-SCAN (scan the physical table QR, auto-open UPI app) ──────
+let payQRStream = null, payQRScanning = false;
+
+async function openPayCameraScan(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    showToast('⚠️ Camera not supported on this browser');
+    return;
+  }
+  const overlay = document.getElementById('payQRScanOverlay');
+  const status  = document.getElementById('payQRStatus');
+  overlay.style.display = 'flex';
+  status.textContent = 'Scanning…';
+  const video = document.getElementById('payQRVideo');
+  try{
+    try{
+      payQRStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+    }catch(e){
+      payQRStream = await navigator.mediaDevices.getUserMedia({video:true});
+    }
+    video.srcObject = payQRStream;
+    await video.play();
+    payQRScanning = true;
+    requestAnimationFrame(scanPayQRFrame);
+  }catch(e){
+    showToast('⚠️ Camera access denied — allow camera permission to scan');
+    closePayCameraScan();
+  }
+}
+
+function closePayCameraScan(){
+  payQRScanning = false;
+  const overlay = document.getElementById('payQRScanOverlay');
+  if(overlay) overlay.style.display = 'none';
+  if(payQRStream){ payQRStream.getTracks().forEach(t=>t.stop()); payQRStream = null; }
+}
+
+function scanPayQRFrame(){
+  if(!payQRScanning) return;
+  const video  = document.getElementById('payQRVideo');
+  const canvas = document.getElementById('payQRCanvas');
+  if(video.readyState === video.HAVE_ENOUGH_DATA && typeof jsQR === 'function'){
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if(code && code.data){
+      handlePayQRResult(code.data);
+      return;
+    }
+  }
+  requestAnimationFrame(scanPayQRFrame);
+}
+
+function handlePayQRResult(data){
+  const status = document.getElementById('payQRStatus');
+  if(status) status.textContent = '✅ QR detected! Opening payment app…';
+  closePayCameraScan();
+
+  // If the scanned QR itself is a UPI payment link, open it directly.
+  // Otherwise fall back to our own stored UPI ID.
+  const target = (data && data.startsWith('upi://')) ? data
+    : `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${(document.getElementById('payAmount')?.textContent||'0').replace(/[₹,\s]/g,'')}&cu=INR&tn=${encodeURIComponent('thebubble.brew order')}`;
+
+  window.location.href = target;
+  setTimeout(()=>{
+    if(document.hasFocus()) showToast('⚠️ No UPI app found — install GPay/PhonePe/Paytm to pay');
+  }, 1500);
+}
+
 function openPayModal(total, note=''){
   document.getElementById('payAmount').textContent = `₹${total}`;
   const noteDisplay = document.getElementById('payModalNote');
@@ -1740,6 +1851,7 @@ function openPayModal(total, note=''){
 
 function closePayModal(){
   document.getElementById('payModal').classList.remove('open');
+  closePayCameraScan();
 }
 
 function confirmPayment(){
@@ -1811,6 +1923,7 @@ function verifyOTP(){
   loadLoyaltyData(phone);
   saveCustomerSession(phone);
   showToast('✅ Welcome! You are logged in 🎉');
+  renderRecentDishes();
   // Auto close
   closeOTPModal();
 }
@@ -1987,8 +2100,66 @@ document.querySelector('.logo-wrap').addEventListener('click', function(){
 // ────── MENU ──────
 let currentCat = 'all';
 let currentSubcat = 'all';
+let menuSearchQuery = '';
 
 const subcatLabels = {};
+
+// ── SEARCH ──
+function searchMenu(q){
+  menuSearchQuery = (q||'').trim().toLowerCase();
+  const clearBtn = document.getElementById('menuSearchClear');
+  if(clearBtn) clearBtn.style.display = menuSearchQuery ? 'block' : 'none';
+  renderMenuCards(currentCat, currentSubcat);
+}
+function clearMenuSearch(){
+  const input = document.getElementById('menuSearchInput');
+  if(input) input.value = '';
+  menuSearchQuery = '';
+  const clearBtn = document.getElementById('menuSearchClear');
+  if(clearBtn) clearBtn.style.display = 'none';
+  renderMenuCards(currentCat, currentSubcat);
+}
+
+// ── RECENT DISHES ──
+function getRecentDishNames(){
+  if(!currentUser || (!currentUser.phone && !currentUser.uid && !currentUser.email)) return [];
+  const myOrders = ordersData
+    .filter(o=> (currentUser.phone && o.phone===currentUser.phone) )
+    .sort((a,b)=> (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+  const names = [];
+  myOrders.forEach(o=>{
+    (o.items||'').split(',').forEach(it=>{
+      const nm = it.replace(/×\s*\d+/,'').trim();
+      if(nm && !names.includes(nm)) names.push(nm);
+    });
+  });
+  return names.slice(0,10);
+}
+
+function renderRecentDishes(){
+  const section = document.getElementById('recentDishesSection');
+  const row = document.getElementById('recentDishesRow');
+  if(!section || !row) return;
+  const names = getRecentDishNames();
+  const cards = names.map(nm=>{
+    const idx = menuData.findIndex(m=>m.name===nm);
+    if(idx===-1) return '';
+    const m = menuData[idx];
+    const hasPhoto = menuPhotoStore[m.name];
+    const imgContent = hasPhoto
+      ? `<img src="${hasPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${m.name}"/>`
+      : `<span style="font-size:1.7rem;">${m.emoji}</span>`;
+    return `<div style="flex:0 0 auto;width:112px;background:#fff;border:2px solid rgba(92,51,23,0.1);border-radius:12px;padding:0.55rem;text-align:center;cursor:pointer;" onclick="addToCart(${idx});showToast('✅ ${m.name.replace(/'/g,"\\'")} added!');renderMenuCards(currentCat,currentSubcat)">
+      <div style="width:100%;height:56px;border-radius:8px;background:#f5f0eb;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:0.4rem;">${imgContent}</div>
+      <div style="font-size:0.7rem;font-weight:800;color:#333;line-height:1.2;margin-bottom:2px;">${m.name}</div>
+      <div style="font-size:0.68rem;font-weight:900;color:var(--brown);">₹${m.price}</div>
+    </div>`;
+  }).filter(Boolean);
+
+  if(!cards.length){ section.style.display='none'; row.innerHTML=''; return; }
+  row.innerHTML = cards.join('');
+  section.style.display='block';
+}
 
 function renderSubcatBar(cat){
   const bar = document.getElementById('subcatBar');
@@ -2014,11 +2185,28 @@ function renderMenu(cat){
   currentSubcat = 'all';
   renderSubcatBar(cat);
   renderMenuCards(cat,'all');
+  renderRecentDishes();
 }
 
 function renderMenuCards(cat, subcat){
-  let items = cat==='all' ? menuData : menuData.filter(m=>m.cat===cat);
-  if(subcat && subcat!=='all') items = items.filter(m=>m.subcat===subcat);
+  let items;
+  if(menuSearchQuery){
+    // Search looks across the whole menu, regardless of selected category
+    items = menuData.filter(m=>
+      (m.name||'').toLowerCase().includes(menuSearchQuery) ||
+      (m.desc||'').toLowerCase().includes(menuSearchQuery)
+    );
+  } else {
+    items = cat==='all' ? menuData : menuData.filter(m=>m.cat===cat);
+    if(subcat && subcat!=='all') items = items.filter(m=>m.subcat===subcat);
+  }
+
+  if(menuSearchQuery && !items.length){
+    document.getElementById('menuItems').innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:var(--muted);font-weight:700;">
+      🔍 No dishes found for "<span style="color:var(--brown)">${menuSearchQuery}</span>"
+    </div>`;
+    return;
+  }
 
   document.getElementById('menuItems').innerHTML = `<div class="menu-grid">${
     items.map(m=>{
@@ -2054,6 +2242,7 @@ function renderMenuCards(cat, subcat){
 function filterMenu(cat,el){
   currentCat = cat;
   currentSubcat = 'all';
+  clearMenuSearch();
   document.querySelectorAll('.menu-tab').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');
   renderMenu(cat);
@@ -5040,6 +5229,7 @@ async function handleGoogleLogin(user){
   if(welcomeMsg) welcomeMsg.textContent = `Welcome, ${currentUser.name.split(' ')[0]}! ☕`;
   saveCustomerSession(currentUser.email || currentUser.uid);
   showToast(`✅ Welcome, ${currentUser.name.split(' ')[0]}!`);
+  renderRecentDishes();
 }
 
 auth.onAuthStateChanged(async user=>{
