@@ -1429,8 +1429,8 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="pay-amount" id="payAmount">₹0</div>
     <div id="payModalNote" style="display:none;background:#fff7ed;border:1.5px solid var(--brown);border-radius:8px;padding:8px 12px;font-size:0.8rem;font-weight:700;color:var(--brown);margin-bottom:0.75rem;text-align:left;"></div>
 
-    <button onclick="openPayCameraScan()" style="width:100%;background:var(--brown);color:#fff;border:none;padding:13px;border-radius:10px;font-weight:900;font-size:0.85rem;cursor:pointer;margin-bottom:0.9rem;display:flex;align-items:center;justify-content:center;gap:8px;">
-      📷 Scan Table QR to Pay
+    <button onclick="openPayCameraScan()" style="width:100%;background:var(--brown);color:#fff;border:none;padding:13px;border-radius:10px;font-weight:900;font-size:0.85rem;cursor:pointer;margin-bottom:0.9rem;">
+      Scan Table QR to Pay
     </button>
 
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.9rem;">
@@ -1443,21 +1443,21 @@ tbody tr:last-child td{border-bottom:none;}
 
     <!-- UPI App Buttons -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
-      <button onclick="payViaUPI('gpay')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#4285f4'" onmouseout="this.style.borderColor='#e5e7eb'">
-        <span style="font-size:1.8rem;">🟢</span> Google Pay
+      <button onclick="payViaUPI('gpay')" style="padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#4285f4'" onmouseout="this.style.borderColor='#e5e7eb'">
+        Google Pay
       </button>
-      <button onclick="payViaUPI('phonepe')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#5f259f'" onmouseout="this.style.borderColor='#e5e7eb'">
-        <span style="font-size:1.8rem;">💜</span> PhonePe
+      <button onclick="payViaUPI('phonepe')" style="padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#5f259f'" onmouseout="this.style.borderColor='#e5e7eb'">
+        PhonePe
       </button>
-      <button onclick="payViaUPI('paytm')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#00baf2'" onmouseout="this.style.borderColor='#e5e7eb'">
-        <span style="font-size:1.8rem;">🔵</span> Paytm
+      <button onclick="payViaUPI('paytm')" style="padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#00baf2'" onmouseout="this.style.borderColor='#e5e7eb'">
+        Paytm
       </button>
-      <button onclick="payViaUPI('other')" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#f47920'" onmouseout="this.style.borderColor='#e5e7eb'">
-        <span style="font-size:1.8rem;">📱</span> Other UPI
+      <button onclick="payViaUPI('other')" style="padding:14px;border:2px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;font-size:0.8rem;color:#333;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#f47920'" onmouseout="this.style.borderColor='#e5e7eb'">
+        Other UPI
       </button>
     </div>
 
-    <button class="btn-paid" onclick="confirmPayment()">✅ I Have Paid</button>
+    <button class="btn-paid" onclick="confirmPayment()">I Have Paid</button>
     <button onclick="closePayModal()" style="background:none;border:none;color:var(--muted);font-size:0.8rem;font-weight:700;cursor:pointer;margin-top:0.5rem;width:100%;">Cancel</button>
   </div>
 </div>
@@ -1465,7 +1465,7 @@ tbody tr:last-child td{border-bottom:none;}
 <!-- ═══════════ PAY-VIA-CAMERA QR SCAN OVERLAY ═══════════ -->
 <div id="payQRScanOverlay" style="display:none;position:fixed;inset:0;background:#000;z-index:99999;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;box-sizing:border-box;">
   <button onclick="closePayCameraScan()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.15);color:#fff;border:none;width:38px;height:38px;border-radius:50%;font-size:1.15rem;cursor:pointer;">✕</button>
-  <div style="color:#fff;font-weight:800;font-size:0.9rem;margin-bottom:1rem;text-align:center;max-width:320px;">📷 Point camera at the table's payment QR code</div>
+  <div style="color:#fff;font-weight:800;font-size:0.9rem;margin-bottom:1rem;text-align:center;max-width:320px;">Point camera at the table's payment QR code</div>
   <div style="position:relative;width:min(90vw,340px);">
     <video id="payQRVideo" playsinline muted style="width:100%;border-radius:16px;border:3px solid #fff;background:#111;display:block;"></video>
     <div style="position:absolute;inset:8%;border:3px dashed rgba(255,255,255,0.6);border-radius:12px;pointer-events:none;"></div>
@@ -1783,9 +1783,16 @@ async function openPayCameraScan(){
   const video = document.getElementById('payQRVideo');
   try{
     try{
-      payQRStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
-    }catch(e){
-      payQRStream = await navigator.mediaDevices.getUserMedia({video:true});
+      // Try to force the BACK camera strictly first
+      payQRStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'}}});
+    }catch(e1){
+      try{
+        // Some devices don't support 'exact' — fall back to a strong preference for back camera
+        payQRStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+      }catch(e2){
+        // Last resort — any available camera
+        payQRStream = await navigator.mediaDevices.getUserMedia({video:true});
+      }
     }
     video.srcObject = payQRStream;
     await video.play();
