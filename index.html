@@ -1729,19 +1729,25 @@ function payViaUPI(app){
   const name   = encodeURIComponent(UPI_NAME);
   const note   = encodeURIComponent('thebubble.brew order');
   const txnRef = encodeURIComponent('BB'+Date.now());
+  const common = `pa=${UPI_ID}&pn=${name}&am=${amount}&cu=INR&tn=${note}&tr=${txnRef}`;
 
-  // Generic UPI deep link — the phone's OS itself opens whichever UPI app
-  // the customer already has installed (GPay / PhonePe / Paytm / BHIM / etc.)
-  // instead of us trying to guess/target one specific app. This is the most
-  // reliable way to make sure "their own app opens directly" and payment goes through.
-  const upiLink = `upi://pay?pa=${UPI_ID}&pn=${name}&am=${amount}&cu=INR&tn=${note}&tr=${txnRef}`;
+  // iPhone (iOS) does NOT recognise the generic "upi://" scheme — that is an
+  // Android-only convention. Each app instead registers its OWN custom scheme,
+  // which iOS *does* support for direct app-to-app opening. So we target the
+  // exact app the customer tapped — this makes iPhone behave just like Android.
+  const links = {
+    gpay:    `tez://upi/pay?${common}`,        // Google Pay (works on both Android & iPhone)
+    phonepe: `phonepe://pay?${common}`,         // PhonePe (works on both Android & iPhone)
+    paytm:   `paytmmp://pay?${common}`,         // Paytm (works on both Android & iPhone)
+    other:   `upi://pay?${common}`,             // Generic — Android only, shows app chooser
+  };
 
-  window.location.href = upiLink;
+  window.location.href = links[app] || links.other;
 
-  // Fallback: some iPhones / browsers silently swallow the upi:// scheme
-  // if no UPI app is installed to handle it — let the customer know.
+  // Fallback: if the tapped app isn't installed, the phone silently does
+  // nothing (no crash/redirect) — let the customer know within a couple seconds.
   setTimeout(()=>{
-    if(document.hasFocus()) showToast('⚠️ No UPI app found — install GPay/PhonePe/Paytm to pay');
+    if(document.hasFocus()) showToast('⚠️ App not found — install it or try another UPI app');
   }, 1500);
 }
 
