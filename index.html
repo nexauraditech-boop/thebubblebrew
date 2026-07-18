@@ -1216,7 +1216,7 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="cust-phone" id="custPhone">+91 XXXXX XXXXX</div>
     <div style="display:flex;gap:0.75rem;justify-content:center;margin-top:1.25rem;flex-wrap:wrap;">
       <span style="background:rgba(255,255,255,0.1);color:#d4a882;padding:4px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;">⭐ Loyalty Member</span>
-      <span style="background:rgba(255,255,255,0.1);color:#d4a882;padding:4px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;">📋 27 Total Orders</span>
+      <span style="background:rgba(255,255,255,0.1);color:#d4a882;padding:4px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;">📋 <span id="custTotalOrders">0</span> Total Orders</span>
     </div>
   </div>
   <div class="cust-body">
@@ -1345,7 +1345,7 @@ tbody tr:last-child td{border-bottom:none;}
       <div class="admin-card" style="max-width:500px;">
         <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;color:#000;margin-bottom:1.25rem;">Profile Details</div>
         <div class="form-group"><label>Full Name</label><input type="text" id="profName" value=""/></div>
-        <div class="form-group"><label>Phone Number</label><input type="tel" id="profPhone" value="+91 98765 43210" readonly style="background:#f5f0eb;"/></div>
+        <div class="form-group"><label>Phone Number</label><input type="tel" id="profPhone" placeholder="+91 98765 43210"/></div>
         <div class="form-group"><label>Email</label><input type="email" id="profEmail" placeholder="your@email.com"/></div>
         <button class="btn-sm" onclick="saveCustomerProfile()">Save Changes</button>
         <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid #f5f0eb;">
@@ -1854,10 +1854,11 @@ function verifyOTP(){
 function saveCustomerProfile(){
   const name  = document.getElementById('profName')?.value?.trim();
   const email = document.getElementById('profEmail')?.value?.trim();
+  const phone = document.getElementById('profPhone')?.value?.trim();
   if(!name){ showToast('⚠️ Please enter your name!'); return; }
 
-  if(currentUser){ currentUser.name=name; if(email) currentUser.email=email; }
-  else currentUser={name,email:email||''};
+  if(currentUser){ currentUser.name=name; if(email) currentUser.email=email; if(phone) currentUser.phone=phone; }
+  else currentUser={name,email:email||'',phone:phone||''};
 
   // Save to localStorage — persists on reload
   try{ localStorage.setItem('bb_profile',JSON.stringify({name,email:email||'',phone:currentUser?.phone||'',uid:currentUser?.uid||''})); }catch(e){}
@@ -1868,12 +1869,19 @@ function saveCustomerProfile(){
   const dashBtn=document.getElementById('dashNavBtn');
   if(dashBtn) dashBtn.textContent=name.split(' ')[0];
 
-  // Save to Firestore
-  if(typeof db!=='undefined'&&db&&currentUser?.uid){
-    db.collection('customers').where('uid','==',currentUser.uid).get().then(snap=>{
-      if(!snap.empty) snap.docs[0].ref.update({name,email:email||''});
-      else db.collection('customers').add({name,email:email||'',uid:currentUser.uid,phone:currentUser.phone||'',orders:0,total:'₹0',status:'Active',loyalty:'None',last:'Today',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    });
+  // Save to Firestore — match by uid if we have one, otherwise fall back to phone
+  if(typeof db!=='undefined'&&db){
+    const findQuery = currentUser?.uid
+      ? db.collection('customers').where('uid','==',currentUser.uid)
+      : (currentUser?.phone ? db.collection('customers').where('phone','==',currentUser.phone) : null);
+    const payload = {name, email: email||''};
+    if(phone) payload.phone = phone;
+    if(findQuery){
+      findQuery.get().then(snap=>{
+        if(!snap.empty) snap.docs[0].ref.update(payload);
+        else db.collection('customers').add({...payload, phone: currentUser.phone||'', uid: currentUser?.uid||'', orders:0, total:'₹0', status:'Active', loyalty:'None', last:'Today', createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      }).catch(()=>{});
+    }
   }
   showToast('✅ Profile saved!');
 }
@@ -5108,7 +5116,11 @@ window.addEventListener('DOMContentLoaded', ()=>{
     <p style="font-size:0.82rem;color:var(--muted);font-weight:700;margin-bottom:1.25rem;">Leave a quick review — it means a lot! ☕</p>
     <!-- Star Rating -->
     <div style="display:flex;justify-content:center;gap:8px;margin-bottom:1rem;" id="starRating">
-      ${[1,2,3,4,5].map(n=>`<span onclick="setReviewStar(${n})" id="star_${n}" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>`).join('')}
+      <span onclick="setReviewStar(1)" id="star_1" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
+      <span onclick="setReviewStar(2)" id="star_2" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
+      <span onclick="setReviewStar(3)" id="star_3" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
+      <span onclick="setReviewStar(4)" id="star_4" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
+      <span onclick="setReviewStar(5)" id="star_5" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
     </div>
     <textarea id="reviewText" placeholder="Tell us about your experience…" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:10px;padding:10px;font-size:0.85rem;font-weight:600;font-family:'DM Sans',sans-serif;resize:none;height:80px;margin-bottom:1rem;"></textarea>
     <input id="reviewName" type="text" placeholder="Your name (optional)" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:8px;padding:8px 12px;font-size:0.82rem;font-weight:600;margin-bottom:1rem;font-family:'DM Sans',sans-serif;"/>
@@ -5139,7 +5151,7 @@ async function signInWithGoogle(){
 window.signInWithGoogle = signInWithGoogle;
 
 async function handleGoogleLogin(user){
-  currentUser = {name:user.displayName||'Customer', email:user.email, phone:user.phoneNumber||user.uid, photo:user.photoURL, uid:user.uid};
+  currentUser = {name:user.displayName||'Customer', email:user.email, phone:user.phoneNumber||'', photo:user.photoURL, uid:user.uid};
   if(db){
     const snap = await db.collection('customers').where('uid','==',user.uid).get();
     if(snap.empty){
@@ -5200,8 +5212,10 @@ db.collection('menu').orderBy('name').onSnapshot(snap=>{
 // ORDERS
 db.collection('orders').orderBy('createdAt','desc').onSnapshot(snap=>{
   ordersData = snap.docs.map(d=>({...d.data(),firestoreId:d.id}));
-  if(currentUser?.phone){
-    const myOrders=ordersData.filter(o=>o.phone===currentUser.phone);
+  if(currentUser?.phone || currentUser?.uid){
+    const myOrders=ordersData.filter(o=>(currentUser.phone && o.phone===currentUser.phone) || (currentUser.uid && o.uid===currentUser.uid));
+    const totalEl=document.getElementById('custTotalOrders');
+    if(totalEl) totalEl.textContent = myOrders.length;
     const listEl=document.getElementById('custOrdersList');
     if(listEl){
       listEl.innerHTML = myOrders.length===0
@@ -5568,7 +5582,7 @@ confirmPayment=async function(){
   const cartSnapshot=[...cart];
   const totalAmt=cartSnapshot.reduce((s,c)=>s+c.price*c.qty,0);
   const orderId='#'+Math.floor(1000+Math.random()*9000);
-  const orderDoc={id:orderId,customer:currentUser?.name||'Guest',phone:currentUser?.phone||'',items:cartSnapshot.map(c=>`${c.name} ×${c.qty}`).join(', '),total:`₹${totalAmt}`,status:'Preparing',note,time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+  const orderDoc={id:orderId,customer:currentUser?.name||'Guest',phone:currentUser?.phone||'',uid:currentUser?.uid||'',items:cartSnapshot.map(c=>`${c.name} ×${c.qty}`).join(', '),total:`₹${totalAmt}`,status:'Preparing',note,time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),createdAt:firebase.firestore.FieldValue.serverTimestamp()};
   await db.collection('orders').add(orderDoc);
   await db.collection('payment_requests').add({id:orderId,customer:currentUser?.name||'Guest',items:orderDoc.items,amount:`₹${totalAmt}`,status:'Pending',time:orderDoc.time,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
   if(currentUser?.phone){
