@@ -5108,11 +5108,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     <p style="font-size:0.82rem;color:var(--muted);font-weight:700;margin-bottom:1.25rem;">Leave a quick review — it means a lot! ☕</p>
     <!-- Star Rating -->
     <div style="display:flex;justify-content:center;gap:8px;margin-bottom:1rem;" id="starRating">
-      <span onclick="setReviewStar(1)" id="star_1" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
-      <span onclick="setReviewStar(2)" id="star_2" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
-      <span onclick="setReviewStar(3)" id="star_3" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
-      <span onclick="setReviewStar(4)" id="star_4" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
-      <span onclick="setReviewStar(5)" id="star_5" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>
+      ${[1,2,3,4,5].map(n=>`<span onclick="setReviewStar(${n})" id="star_${n}" style="font-size:2rem;cursor:pointer;color:#ddd;transition:color 0.15s;">★</span>`).join('')}
     </div>
     <textarea id="reviewText" placeholder="Tell us about your experience…" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:10px;padding:10px;font-size:0.85rem;font-weight:600;font-family:'DM Sans',sans-serif;resize:none;height:80px;margin-bottom:1rem;"></textarea>
     <input id="reviewName" type="text" placeholder="Your name (optional)" style="width:100%;border:2px solid rgba(92,51,23,0.2);border-radius:8px;padding:8px 12px;font-size:0.82rem;font-weight:600;margin-bottom:1rem;font-family:'DM Sans',sans-serif;"/>
