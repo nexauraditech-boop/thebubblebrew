@@ -716,6 +716,27 @@ tbody tr:last-child td{border-bottom:none;}
 .pay-req-time{font-size:0.78rem;color:#666;font-weight:700;}
 .pay-req-actions{display:flex;gap:8px;margin-top:0.75rem;}
 
+/* ─── REVENUE DASHBOARD ─── */
+.rev-toolbar{display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1.5rem;}
+.rev-toolbar input[type="date"],.rev-toolbar select{
+  padding:8px 12px;border:2px solid rgba(92,51,23,0.2);border-radius:8px;
+  font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.82rem;color:var(--brown);background:#fff;
+}
+.rev-toolbar .btn-sm-outline{padding:7px 14px;}
+.rev-chart-wrap{position:relative;height:260px;width:100%;}
+.rev-chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:1.25rem;margin-bottom:1.5rem;}
+.rev-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:6px;animation:revLivePulse 1.6s ease infinite;}
+@keyframes revLivePulse{0%{opacity:1;}50%{opacity:0.35;}100%{opacity:1;}}
+.rev-history-table td,.rev-history-table th{white-space:nowrap;}
+.rev-empty-row td{text-align:center;padding:1.5rem;color:var(--muted);font-weight:700;}
+@media(max-width:860px){
+  .rev-chart-grid{grid-template-columns:1fr;}
+}
+@media(max-width:600px){
+  .rev-toolbar{flex-direction:column;align-items:stretch;}
+  .rev-toolbar input[type="date"],.rev-toolbar select{width:100%;}
+}
+
 /* ─── HERO WORD STEP ANIMATION ─── */
 .hero-title-anim{display:flex;flex-direction:column;align-items:center;margin-bottom:0.5rem;gap:0;}
 .word-step{
@@ -746,6 +767,7 @@ tbody tr:last-child td{border-bottom:none;}
 </style>
   <!-- Firebase SDK — must load first -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -1180,6 +1202,7 @@ tbody tr:last-child td{border-bottom:none;}
       <div class="sidebar-item" onclick="showAdminSection('loyaltymanager',this)"><span class="sidebar-icon">🏆</span> Loyalty Manager</div>
       <div class="sidebar-item" onclick="showAdminSection('loyalty',this)"><span class="sidebar-icon">⭐</span> Loyalty Requests</div>
       <div class="sidebar-item" onclick="showAdminSection('payments',this)"><span class="sidebar-icon">💳</span> Payment Verify</div>
+      <div class="sidebar-item" onclick="showAdminSection('revenue',this)"><span class="sidebar-icon">💹</span> Revenue Dashboard</div>
       <div class="sidebar-item" onclick="showAdminSection('categories',this)"><span class="sidebar-icon">📁</span> Categories</div>
       <div class="sidebar-item" onclick="showAdminSection('banners',this)"><span class="sidebar-icon">🖼</span> Banners</div>
       <div class="sidebar-item" onclick="showAdminSection('reports',this)"><span class="sidebar-icon">📈</span> Reports</div>
@@ -1501,6 +1524,12 @@ let customersData = [];
 let loyaltyRequests = [];
 
 let paymentRequests = [];
+
+// Permanent revenue ledger — one immutable entry per VERIFIED payment.
+// Lifetime revenue = sum of every entry ever written here (never cleared/reset).
+let revenueLedger = [];
+let revenueChartInstance = null;
+let revenueAutoRefreshTimer = null;
 
 // ════════════════════════════════════════════════
 // ──  LOCAL STORAGE PERSISTENCE SYSTEM  ──────────
@@ -2283,15 +2312,230 @@ function doLogout(){
 }
 
 
+// ════════════════════════════════════════════════
+// ──  REVENUE DASHBOARD  (permanent, DB-backed)  ──
+// ════════════════════════════════════════════════
+// revenueLedger holds one immutable entry per VERIFIED payment:
+// { paymentId, amount, customer, dateKey:'YYYY-MM-DD', time, firestoreId }
+// It is populated live from the Firestore 'revenue_ledger' collection and
+// is only ever appended to (never cleared), so Lifetime Revenue never resets.
+
+function revDateKey(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function revTodayKey(){ return revDateKey(new Date()); }
+function revLabelFromKey(key){ const [y,m,d]=key.split('-'); return `${d}/${m}`; }
+
+// Last N days (inclusive of today), oldest → newest, zero-filled
+function revLastNDays(n){
+  const map={};
+  revenueLedger.forEach(r=>{ map[r.dateKey]=(map[r.dateKey]||0)+Number(r.amount||0); });
+  const out=[]; const now=new Date();
+  for(let i=n-1;i>=0;i--){
+    const d=new Date(now); d.setDate(d.getDate()-i);
+    const key=revDateKey(d);
+    out.push({date:key,label:revLabelFromKey(key),amount:map[key]||0,count:revenueLedger.filter(r=>r.dateKey===key).length});
+  }
+  return out;
+}
+
+// Current calendar month, day-wise, zero-filled up to today
+function revCurrentMonthDayWise(){
+  const now=new Date();
+  const map={};
+  revenueLedger.forEach(r=>{ map[r.dateKey]=(map[r.dateKey]||0)+Number(r.amount||0); });
+  const out=[];
+  for(let day=1;day<=now.getDate();day++){
+    const d=new Date(now.getFullYear(),now.getMonth(),day);
+    const key=revDateKey(d);
+    out.push({date:key,label:String(day),amount:map[key]||0,count:revenueLedger.filter(r=>r.dateKey===key).length});
+  }
+  return out;
+}
+
+function revComputeStats(){
+  const todayK=revTodayKey();
+  const today=revenueLedger.filter(r=>r.dateKey===todayK).reduce((s,r)=>s+Number(r.amount||0),0);
+  const week=revLastNDays(7).reduce((s,d)=>s+d.amount,0);
+  const month=revCurrentMonthDayWise().reduce((s,d)=>s+d.amount,0);
+  const lifetime=revenueLedger.reduce((s,r)=>s+Number(r.amount||0),0);
+  return {today,week,month,lifetime,txns:revenueLedger.length};
+}
+
+// Full date-wise history (all-time), newest first
+function revFullHistory(){
+  const map={};
+  revenueLedger.forEach(r=>{
+    if(!map[r.dateKey]) map[r.dateKey]={date:r.dateKey,amount:0,count:0};
+    map[r.dateKey].amount+=Number(r.amount||0);
+    map[r.dateKey].count+=1;
+  });
+  return Object.values(map).sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+function renderRevenueDashboardHTML(){
+  const s=revComputeStats();
+  return `
+    <h2 class="admin-section-title">💹 Revenue Dashboard</h2>
+    <div class="rev-toolbar" style="justify-content:space-between;">
+      <span style="font-size:0.78rem;color:var(--muted);font-weight:700;"><span class="rev-live-dot"></span>Live — auto-refreshes as payments are verified</span>
+      <button class="btn-sm-outline" id="revBackfillBtn" onclick="backfillHistoricalRevenue()">🔄 Backfill Past Verified Payments</button>
+    </div>
+    <div class="dash-stats">
+      <div class="stat-card"><div class="stat-card-icon">🌤</div><div class="stat-card-label">Today's Revenue</div><div class="stat-card-val">₹${s.today.toLocaleString('en-IN')}</div><div class="stat-card-sub">${revenueLedger.filter(r=>r.dateKey===revTodayKey()).length} verified payment(s)</div></div>
+      <div class="stat-card"><div class="stat-card-icon">📅</div><div class="stat-card-label">This Week</div><div class="stat-card-val">₹${s.week.toLocaleString('en-IN')}</div><div class="stat-card-sub">Last 7 days</div></div>
+      <div class="stat-card"><div class="stat-card-icon">🗓</div><div class="stat-card-label">This Month</div><div class="stat-card-val">₹${s.month.toLocaleString('en-IN')}</div><div class="stat-card-sub">Month to date</div></div>
+      <div class="stat-card" style="border-left-color:#16a34a;"><div class="stat-card-icon">🏆</div><div class="stat-card-label">Lifetime Revenue</div><div class="stat-card-val">₹${s.lifetime.toLocaleString('en-IN')}</div><div class="stat-card-sub">${s.txns} total verified payments · never resets</div></div>
+    </div>
+
+    <div class="rev-chart-grid">
+      <div class="admin-card">
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:#000;margin-bottom:1rem;">📈 Weekly Revenue (day-wise, last 7 days)</div>
+        <div class="rev-chart-wrap"><canvas id="revWeekChart"></canvas></div>
+      </div>
+      <div class="admin-card">
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:#000;margin-bottom:1rem;">📊 Monthly Revenue (day-wise)</div>
+        <div class="rev-chart-wrap"><canvas id="revMonthChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="admin-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem;">
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:#000;">🧾 Date-wise Revenue History</div>
+        <div class="rev-toolbar" style="margin-bottom:0;">
+          <input type="date" id="revFilterDate" onchange="renderRevenueHistoryTable()" max="${revTodayKey()}"/>
+          <button class="btn-sm-outline" onclick="document.getElementById('revFilterDate').value='';renderRevenueHistoryTable()">Clear Filter</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="rev-history-table">
+          <thead><tr><th>Date</th><th>Transactions</th><th>Revenue</th><th></th></tr></thead>
+          <tbody id="revHistoryTbody"></tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function renderRevenueHistoryTable(){
+  const tbody=document.getElementById('revHistoryTbody');
+  if(!tbody) return;
+  const filterVal=document.getElementById('revFilterDate')?.value||'';
+  let rows=revFullHistory();
+  if(filterVal) rows=rows.filter(r=>r.date===filterVal);
+  tbody.innerHTML = rows.length===0
+    ? `<tr class="rev-empty-row"><td colspan="4">${filterVal?'No revenue recorded on this date.':'No verified revenue yet — it will appear here as soon as payments are verified.'}</td></tr>`
+    : rows.map(r=>`<tr>
+        <td><strong>${r.date}</strong></td>
+        <td>${r.count}</td>
+        <td><strong>₹${r.amount.toLocaleString('en-IN')}</strong></td>
+        <td><button class="btn-sm-outline" style="padding:4px 10px;font-size:0.72rem;" onclick="showRevenueDayDetail('${r.date}')">View</button></td>
+      </tr>`).join('');
+}
+
+function showRevenueDayDetail(dateKey){
+  const entries=revenueLedger.filter(r=>r.dateKey===dateKey).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const total=entries.reduce((s,r)=>s+Number(r.amount||0),0);
+  openModal(`🧾 Revenue — ${dateKey}`, `
+    <div style="font-size:0.85rem;font-weight:800;color:var(--brown);margin-bottom:0.75rem;">Total: ₹${total.toLocaleString('en-IN')} across ${entries.length} payment(s)</div>
+    <div style="max-height:320px;overflow-y:auto;">
+      <table style="width:100%;">
+        <thead><tr><th>Payment ID</th><th>Customer</th><th>Amount</th><th>Time</th></tr></thead>
+        <tbody>${entries.map(e=>`<tr><td>${e.paymentId||'—'}</td><td>${e.customer||'Guest'}</td><td>₹${Number(e.amount||0).toLocaleString('en-IN')}</td><td>${e.time||''}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`);
+}
+
+// One-time backfill: pulls in payments that were already Verified BEFORE the
+// Revenue Dashboard existed, so Lifetime Revenue reflects real historical totals too.
+// Safe to click more than once — duplicate paymentIds are skipped.
+backfillHistoricalRevenue=async function(){
+  if(!db){ showToast('⚠️ Firebase not connected (local mode) — backfill needs the live site'); return; }
+  const btn=document.getElementById('revBackfillBtn');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Scanning verified payments…'; }
+  try{
+    const verifiedSnap = await db.collection('payment_requests').where('status','==','Verified').get();
+    const existingSnap = await db.collection('revenue_ledger').get();
+    const already = new Set(existingSnap.docs.map(d=>d.data().paymentId).filter(Boolean));
+
+    let added=0, skipped=0;
+    for(const doc of verifiedSnap.docs){
+      const p=doc.data();
+      if(!p.id || already.has(p.id)){ skipped++; continue; }
+      const amt = parseInt((p.amount||'₹0').toString().replace(/[₹,]/g,''))||0;
+      // Use the payment's real creation date/time (real record), not "today"
+      let d = new Date();
+      if(p.createdAt && typeof p.createdAt.toDate==='function') d = p.createdAt.toDate();
+      await db.collection('revenue_ledger').add({
+        paymentId: p.id,
+        amount: amt,
+        customer: p.customer||'Guest',
+        dateKey: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),
+        time: p.time || d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        backfilled: true
+      });
+      already.add(p.id);
+      added++;
+    }
+    showToast(added>0 ? `✅ Backfilled ${added} past payment(s) into revenue!` : `✔️ Already up to date — nothing new to backfill.`);
+    if(btn){ btn.disabled=false; btn.textContent='🔄 Backfill Past Verified Payments'; }
+  }catch(e){
+    console.error('Backfill failed:', e);
+    showToast('❌ Backfill failed — check console');
+    if(btn){ btn.disabled=false; btn.textContent='🔄 Backfill Past Verified Payments'; }
+  }
+};
+
+function mountRevenueCharts(){
+  renderRevenueHistoryTable();
+  if(typeof Chart==='undefined') return; // Chart.js failed to load (e.g. offline) — dashboard still works without charts
+  const weekData=revLastNDays(7);
+  const monthData=revCurrentMonthDayWise();
+
+  const weekCtx=document.getElementById('revWeekChart');
+  const monthCtx=document.getElementById('revMonthChart');
+  if(!weekCtx||!monthCtx) return;
+
+  if(revenueChartInstance){
+    revenueChartInstance.week?.destroy();
+    revenueChartInstance.month?.destroy();
+  }
+  const chartOpts={
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{y:{beginAtZero:true,ticks:{callback:v=>'₹'+v}}}
+  };
+  const week=new Chart(weekCtx,{
+    type:'bar',
+    data:{labels:weekData.map(d=>d.label),datasets:[{label:'Revenue',data:weekData.map(d=>d.amount),backgroundColor:'#5c3317',borderRadius:6}]},
+    options:chartOpts
+  });
+  const month=new Chart(monthCtx,{
+    type:'line',
+    data:{labels:monthData.map(d=>d.label),datasets:[{label:'Revenue',data:monthData.map(d=>d.amount),borderColor:'#a0622a',backgroundColor:'rgba(160,98,42,0.15)',fill:true,tension:0.3,pointRadius:2}]},
+    options:chartOpts
+  });
+  revenueChartInstance={week,month};
+}
+
 // ────── ADMIN SECTIONS ──────
 function showAdminSection(sec, el){
   if(el){document.querySelectorAll('.sidebar-item').forEach(s=>s.classList.remove('active'));el.classList.add('active');}
   const c=document.getElementById('adminContent');
 
+  // Manage revenue dashboard auto-refresh timer (only ticks while that tab is open)
+  if(revenueAutoRefreshTimer){ clearInterval(revenueAutoRefreshTimer); revenueAutoRefreshTimer=null; }
+  if(sec==='revenue'){
+    revenueAutoRefreshTimer=setInterval(()=>{
+      const active=document.querySelector('.sidebar-item.active');
+      if(active && active.textContent.includes('Revenue Dashboard')) showAdminSection('revenue', null);
+    }, 30000);
+  }
+
   if(sec==='dashboard') {
     // Calculate live stats from real data
     const todayOrders = ordersData.length;
-    const todayRevenue = ordersData.reduce((s,o)=>s+parseInt(o.total.replace(/[₹,]/g,'')||0),0);
+    const todayRevenue = revenueLedger.filter(r=>r.dateKey===revTodayKey()).reduce((s,r)=>s+Number(r.amount||0),0);
     const loyaltyCount = loyaltyRequests.filter(r=>r.status==='Approved').length;
     const pendingPayments = paymentRequests.filter(p=>p.status==='Pending').length;
     const pendingLoyalty = loyaltyRequests.filter(r=>r.status==='Pending').length;
@@ -2303,7 +2547,7 @@ function showAdminSection(sec, el){
     ${pendingPayments>0?`<div class="alert-card" style="background:#fff7ed;border-color:var(--brown);">💳 <strong>${pendingPayments} Payment${pendingPayments>1?'s':''}</strong> pending verification. <a href="#" onclick="showAdminSection('payments',null)" style="color:var(--brown);">Verify →</a></div>`:''}
     <div class="dash-stats">
       <div class="stat-card"><div class="stat-card-icon">📋</div><div class="stat-card-label">Orders Today</div><div class="stat-card-val">${todayOrders}</div><div class="stat-card-sub">All orders</div></div>
-      <div class="stat-card"><div class="stat-card-icon">💰</div><div class="stat-card-label">Revenue Today</div><div class="stat-card-val">₹${todayRevenue.toLocaleString('en-IN')}</div><div class="stat-card-sub">From confirmed orders</div></div>
+      <div class="stat-card"><div class="stat-card-icon">💰</div><div class="stat-card-label">Revenue Today</div><div class="stat-card-val">₹${todayRevenue.toLocaleString('en-IN')}</div><div class="stat-card-sub">From verified payments only</div></div>
       <div class="stat-card"><div class="stat-card-icon">⭐</div><div class="stat-card-label">Loyalty Members</div><div class="stat-card-val">${loyaltyCount}</div><div class="stat-card-sub">Approved cards</div></div>
       <div class="stat-card"><div class="stat-card-icon">👥</div><div class="stat-card-label">Customers</div><div class="stat-card-val">${customersData.length}</div><div class="stat-card-sub">${customersData.filter(c=>c.status==='Active').length} active</div></div>
       <div class="stat-card"><div class="stat-card-icon">🍽</div><div class="stat-card-label">Menu Items</div><div class="stat-card-val">${totalItems}</div><div class="stat-card-sub">${categoriesData.length} categories</div></div>
@@ -2468,6 +2712,12 @@ function showAdminSection(sec, el){
       }
     </div>`).join('')
     }`;
+    return;
+  }
+
+  if(sec==='revenue'){
+    c.innerHTML = renderRevenueDashboardHTML();
+    mountRevenueCharts();
     return;
   }
 
@@ -5262,6 +5512,16 @@ db.collection('payment_requests').onSnapshot(snap=>{
   paymentRequests=snap.docs.map(d=>({...d.data(),firestoreId:d.id}));
 });
 
+// REVENUE LEDGER — permanent record of every VERIFIED payment. Never deleted/reset.
+// This is the single source of truth for Today / Weekly / Monthly / Lifetime revenue.
+db.collection('revenue_ledger').onSnapshot(snap=>{
+  revenueLedger=snap.docs.map(d=>({...d.data(),firestoreId:d.id}));
+  const active=document.querySelector('.sidebar-item.active');
+  if(active && active.textContent.includes('Revenue Dashboard')){
+    showAdminSection('revenue', null);
+  }
+});
+
 // BANNERS
 db.collection('banners').orderBy('order').onSnapshot(snap=>{
   bannersData=snap.docs.map(d=>({...d.data(),firestoreId:d.id}));
@@ -5608,7 +5868,27 @@ localLoyaltyUpdate=async function(i,status){
 
 localPaymentUpdate=async function(i,status){
   const p=paymentRequests[i];
+  if(!p) return;
+  const wasAlreadyVerified = p.status==='Verified';
   if(p?.firestoreId) await db.collection('payment_requests').doc(p.firestoreId).update({status});
+  // Record revenue permanently — ONLY for payments transitioning into 'Verified', and only once per payment.
+  if(status==='Verified' && !wasAlreadyVerified){
+    try{
+      const dupCheck = await db.collection('revenue_ledger').where('paymentId','==',p.id||'').limit(1).get();
+      if(dupCheck.empty){
+        const amt = parseInt((p.amount||'₹0').toString().replace(/[₹,]/g,''))||0;
+        const now = new Date();
+        await db.collection('revenue_ledger').add({
+          paymentId: p.id||'',
+          amount: amt,
+          customer: p.customer||'Guest',
+          dateKey: now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'),
+          time: now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    }catch(e){ console.warn('Revenue ledger write failed:', e); }
+  }
   showAdminSection('payments',document.querySelector('.sidebar-item.active'));
   showToast(`${status==='Verified'?'✅ Payment verified!':'❌ Rejected'}`);
 };
